@@ -95,7 +95,7 @@ function start(){
     const u = session?.user || null;
     const zmiana = (u?.id || null) !== (S.user?.id || null);
     S.user = u; pasek();
-    if (zmiana || ev === 'INITIAL_SESSION') u ? wczytaj() : ekranLogowania();
+    if (zmiana || (ev === 'INITIAL_SESSION' && !u)) u ? wczytaj() : ekranLogowania();
   });
 }
 
