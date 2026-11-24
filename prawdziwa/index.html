@@ -44,6 +44,37 @@ h1{font-size:22px;margin:0 0 6px}h2{font-size:18px;margin:16px 0 8px}
 .empty{text-align:center;padding:28px 14px}
 .load{opacity:.6;pointer-events:none}
 @media (max-width:640px){.g3{grid-template-columns:1fr 1fr}.g3 .kpi:last-child{grid-column:1/-1}.g2{grid-template-columns:1fr}}
+/* ---------- Biblioteka ---------- */
+.btnBib{font-size:17px;padding:14px;margin-bottom:12px}
+.fold{display:flex;align-items:center;gap:12px;cursor:pointer;width:100%;text-align:left;background:transparent;color:var(--c)}
+.fold .ik{flex:none;width:44px;height:36px;border-radius:6px 6px 8px 8px;background:var(--c);position:relative}
+.fold .ik::before{content:"";position:absolute;left:0;top:-6px;width:20px;height:8px;border-radius:4px 4px 0 0;background:var(--c)}
+.fold .tx{flex:1;min-width:0}
+.fold .tx b{font-size:17px;display:block}
+.fold .tx small{display:block;font-size:13px}
+.fold .str{flex:none;font-size:22px;color:var(--z);font-weight:700}
+.sciezka{font-size:13px;margin:0 0 4px}
+.wgraj{display:block;text-align:center;cursor:pointer}
+.files{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.plik{border:1px solid var(--z);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.plik .mini{display:block;width:100%;aspect-ratio:4/3;border:none;padding:0;cursor:pointer;background:var(--c);overflow:hidden}
+.plik .mini img{width:100%;height:100%;object-fit:cover;display:block}
+.plik .mini .pdf{display:flex;height:100%;align-items:center;justify-content:center;color:var(--z);font-weight:700;font-size:26px;letter-spacing:1px}
+.plik .opis{padding:10px;flex:1;display:flex;flex-direction:column;gap:6px}
+.plik .opis b{font-size:14px;word-break:break-word}
+.plik .opis small{font-size:12px}
+.plik .opis .acts{margin-top:4px}
+.plik .opis .acts > *{min-width:0;padding:8px 10px}
+.okno{position:fixed;inset:0;z-index:50;background:rgba(30,26,23,.96);color:var(--k);display:flex;flex-direction:column}
+.okno .gora{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--z)}
+.okno .gora b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.okno .gora .btn2{color:var(--k);border-color:var(--z);padding:8px 12px}
+.okno .info{padding:8px 16px;font-size:13px}
+.okno .tresc{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 16px 16px;gap:12px}
+.okno .tresc img{max-width:100%;max-height:100%;object-fit:contain}
+.okno .tresc iframe{flex:1;width:100%;border:none;background:var(--k);border-radius:8px}
+.okno .tresc a.btn{text-decoration:none;text-align:center}
+@media (max-width:700px){.okno .tresc iframe{display:none}.files{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -216,8 +247,9 @@ function ekranListy(msg){
 function ekranMieszkania(id, msg){
   const f = S.flats.find(x => x.id === id); if (!f) return ekranListy();
   app.innerHTML = `<button class="btnT" id="wroc">← Moje mieszkania</button>
-    <h1>${esc(f.ulica)}</h1><p class="intro">Dane mieszkania. Możesz je zmienić albo usunąć mieszkanie.</p>
+    <h1>${esc(f.ulica)}</h1><p class="intro">Dane mieszkania. Kliknij „Biblioteka”, żeby wgrać albo obejrzeć zdjęcia i pliki PDF tego mieszkania. Możesz też zmienić dane albo usunąć mieszkanie.</p>
     ${msg ? komunikat(msg, true) : ''}
+    <button class="btn full btnBib" id="biblioteka">Biblioteka – zdjęcia i pliki PDF</button>
     <div class="card">
       <div class="row"><span>Ulica i numer</span><b>${esc(f.ulica)}</b></div>
       <div class="row"><span>Miasto</span><b>${esc(f.miasto) || '–'}</b></div>
@@ -227,9 +259,10 @@ function ekranMieszkania(id, msg){
       <div class="row"><span>Termin końca</span><b class="${spozn(f)?'late':''}">${dt(f.termin_konca)}</b></div>
       ${f.opis ? `<div class="row"><span>Opis</span><b style="white-space:pre-wrap;text-align:right">${esc(f.opis)}</b></div>` : ''}
     </div>
-    <div class="card"><b>Co będzie dalej</b><br>W kolejnych krokach dojdą tu: Biblioteka (zdjęcia, plany, faktury), Lista prac, Terminy, Płatności i Chat z firmą.</div>
+    <div class="card"><b>Co będzie dalej</b><br>W kolejnych krokach dojdą tu: Lista prac, Terminy, Płatności i Chat z firmą.</div>
     <div class="acts"><button class="btn" id="zmien">Zmień dane</button><button class="btn2" id="usun">Usuń mieszkanie</button></div>`;
   $('#wroc').onclick = () => ekranListy();
+  $('#biblioteka').onclick = () => ekranBiblioteki(f.id);
   $('#zmien').onclick = () => ekranFormularza(f);
   $('#usun').onclick = () => ekranUsun(f);
 }
@@ -242,6 +275,8 @@ function ekranUsun(f, msg){
   $('#nie').onclick = () => ekranMieszkania(f.id);
   $('#tak').onclick = async () => {
     $('#tak').disabled = true;
+    const n = await ilePlikowMieszkania(f.id);
+    if (n) return ekranUsunZablokowane(f, n);
     const { error } = await sb.from('mieszkania').delete().eq('id', f.id);
     if (error) return ekranUsun(f, blad(error));
     wczytaj('Mieszkanie ' + f.ulica + ' zostało usunięte.');
@@ -283,6 +318,200 @@ function ekranFormularza(f, msg, wpis){
     S.flats.sort((a,b) => a.ulica.localeCompare(b.ulica, 'pl', {numeric:true}));
     n ? ekranListy('Mieszkanie ' + data.ulica + ' zapisane.') : ekranMieszkania(f.id, 'Zmiany zapisane.');
   };
+}
+
+/* ---------- Biblioteka ---------- */
+const SCHOWEK = 'biblioteka';
+const MAX_PDF = 20 * 1024 * 1024;
+const FOLDERY = [
+  { k:'faktury', n:'Faktury', o:'faktury za remont, materiały, notariusza, pośredników i inne', pod:[
+    { k:'faktury_firma', n:'Firma remontowa', o:'faktury od firmy remontowej' },
+    { k:'faktury_materialy', n:'Materiały', o:'faktury za materiały' },
+    { k:'faktury_notariusz', n:'Notariusz', o:'faktury od notariusza' },
+    { k:'faktury_posrednicy', n:'Pośrednicy', o:'faktury od pośredników' },
+    { k:'faktury_inne', n:'Inne', o:'pozostałe faktury, które nie pasują do innych folderów', ostatni:true } ] },
+  { k:'paragony', n:'Paragony', o:'paragony ze sklepów' },
+  { k:'plany', n:'Plany od architekta', o:'plany mieszkania od architekta. Teraz widzi je Właściciel aplikacji, później zobaczy je też firma remontowa' },
+  { k:'postepy', n:'Postępy prac', o:'zdjęcia postępów remontu' },
+  { k:'poprawki', n:'Poprawki', o:'zdjęcia usterek do poprawienia' },
+  { k:'zdjecia', n:'Zdjęcia', o:'zdjęcia mieszkania przed remontem i po remoncie', pod:[
+    { k:'zdjecia_po', n:'Po remoncie', o:'zdjęcia mieszkania po remoncie' },
+    { k:'zdjecia_przed', n:'Przed remontem', o:'zdjęcia mieszkania przed remontem' } ] }
+];
+const alfabet = (a, b) => (a.ostatni ? 1 : 0) - (b.ostatni ? 1 : 0) || a.n.localeCompare(b.n, 'pl');
+FOLDERY.sort(alfabet); FOLDERY.forEach(g => g.pod && g.pod.sort(alfabet));
+const LISCIE = {}; FOLDERY.forEach(g => (g.pod || [g]).forEach(l => LISCIE[l.k] = { ...l, grupa: g.pod ? g : null }));
+const kluczeGrupy = g => (g.pod || [g]).map(l => l.k);
+
+const czas = t => { const d = new Date(t); return d.toLocaleDateString('pl-PL') + ', ' + d.toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'}); };
+const wielkosc = n => n < 1048576 ? Math.max(1, Math.round(n / 1024)) + ' KB' : (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
+const ileP = n => n + ' ' + (n === 1 ? 'plik' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 'pliki' : 'plików');
+const bladPliku = e => {
+  const m = (e && (e.message || e.error)) || String(e);
+  if (/bucket not found/i.test(m) || /relation .*pliki/i.test(m) || /Could not find the table/i.test(m)) return 'Biblioteka nie jest jeszcze włączona w bazie danych. Trzeba wgrać plik 02_biblioteka.sql w Supabase.';
+  if (/mime type|not supported/i.test(m)) return 'Ten rodzaj pliku nie jest dozwolony. Można wgrywać tylko zdjęcia i pliki PDF.';
+  if (/maximum allowed size|too large|Payload too large/i.test(m)) return 'Plik jest za duży. Plik PDF może mieć najwyżej 20 MB.';
+  return blad(e);
+};
+const mieszkanie = id => S.flats.find(x => x.id === id);
+
+function sciezkaFolderu(f, lisc){
+  return `<button class="btnT" id="wrocBib">← ${lisc.grupa ? esc(lisc.grupa.n) : 'Biblioteka'}</button>
+    <p class="sciezka">${esc(f.ulica)} › Biblioteka${lisc.grupa ? ' › ' + esc(lisc.grupa.n) : ''}</p>`;
+}
+
+async function ekranBiblioteki(fid, msg){
+  const f = mieszkanie(fid); if (!f) return ekranListy();
+  app.innerHTML = '<p>Wczytuję Bibliotekę…</p>';
+  const { data, error } = await sb.from('pliki').select('folder').eq('mieszkanie', fid);
+  const ile = {}; (data || []).forEach(p => ile[p.folder] = (ile[p.folder] || 0) + 1);
+  app.innerHTML = `<button class="btnT" id="wroc">← Wróć do mieszkania</button>
+    <h1>Biblioteka – ${esc(f.ulica)}</h1>
+    <p class="intro">Tu są wszystkie zdjęcia i pliki PDF tego mieszkania, ułożone w folderach od A do Z. Kliknij folder, żeby go otworzyć. W folderze Właściciel aplikacji wgrywa zdjęcia i pliki PDF, ogląda je i usuwa.</p>
+    ${error ? komunikat(bladPliku(error)) : ''}${msg ? komunikat(msg, true) : ''}
+    <div id="foldery">${FOLDERY.map(g => {
+      const n = kluczeGrupy(g).reduce((s, k) => s + (ile[k] || 0), 0);
+      return `<button class="card fold" data-g="${g.k}"><span class="ik"></span>
+        <span class="tx"><b>${esc(g.n)}</b><small>${g.pod ? 'Podfoldery: ' + g.pod.map(l => esc(l.n)).join(', ') + ' · ' : ''}${ileP(n)}</small></span><span class="str">›</span></button>`;
+    }).join('')}</div>`;
+  $('#wroc').onclick = () => ekranMieszkania(fid);
+  app.querySelectorAll('.fold').forEach(b => b.onclick = () => {
+    const g = FOLDERY.find(x => x.k === b.dataset.g);
+    g.pod ? ekranPodfolderow(fid, g.k, ile) : ekranFolderu(fid, g.k);
+  });
+}
+
+async function ekranPodfolderow(fid, gk, ile){
+  const f = mieszkanie(fid); if (!f) return ekranListy();
+  const g = FOLDERY.find(x => x.k === gk);
+  if (!ile){
+    app.innerHTML = '<p>Wczytuję folder…</p>';
+    const { data } = await sb.from('pliki').select('folder').eq('mieszkanie', fid);
+    ile = {}; (data || []).forEach(p => ile[p.folder] = (ile[p.folder] || 0) + 1);
+  }
+  app.innerHTML = `<button class="btnT" id="wrocBib">← Biblioteka</button>
+    <p class="sciezka">${esc(f.ulica)} › Biblioteka</p>
+    <h1>${esc(g.n)}</h1>
+    <p class="intro">W tym folderze są ${esc(g.o)}, podzielone na podfoldery. Kliknij podfolder, żeby wgrać albo obejrzeć jego zdjęcia i pliki PDF.</p>
+    <div id="foldery">${g.pod.map(l => `<button class="card fold" data-l="${l.k}"><span class="ik"></span>
+      <span class="tx"><b>${esc(l.n)}</b><small>${ileP(ile[l.k] || 0)}</small></span><span class="str">›</span></button>`).join('')}</div>`;
+  $('#wrocBib').onclick = () => ekranBiblioteki(fid);
+  app.querySelectorAll('.fold').forEach(b => b.onclick = () => ekranFolderu(fid, b.dataset.l));
+}
+
+async function ekranFolderu(fid, lk, msg, info = true){
+  const f = mieszkanie(fid); if (!f) return ekranListy();
+  const l = LISCIE[lk];
+  app.innerHTML = '<p>Wczytuję pliki…</p>';
+  const { data, error } = await sb.from('pliki').select('*').eq('mieszkanie', fid).eq('folder', lk).order('utworzono', { ascending:false });
+  const pliki = data || [];
+  let linki = {};
+  if (pliki.length){
+    const { data: u } = await sb.storage.from(SCHOWEK).createSignedUrls(pliki.map(p => p.sciezka), 3600);
+    (u || []).forEach(x => { if (x.signedUrl) linki[x.path] = x.signedUrl; });
+  }
+  app.innerHTML = `${sciezkaFolderu(f, l)}
+    <h1>${esc(l.n)}</h1>
+    <p class="intro">Tu są ${esc(l.o)}. Kliknij „Wgraj zdjęcia lub pliki PDF” i wybierz pliki (na telefonie można też od razu zrobić zdjęcie). Po wgraniu plik pojawi się na liście, najnowszy na górze. Kliknij plik, żeby go obejrzeć, albo usuń go.</p>
+    ${error ? komunikat(bladPliku(error)) : ''}${msg ? komunikat(msg, info) : ''}
+    <label class="btn full wgraj" for="plikiWybor" id="wgraj">+ Wgraj zdjęcia lub pliki PDF</label>
+    <input type="file" id="plikiWybor" class="hide" multiple accept="image/jpeg,image/png,image/webp,image/*,application/pdf,.pdf">
+    <h2>${pliki.length ? 'Pliki w folderze (' + pliki.length + ')' : 'Pliki w folderze'}</h2>
+    ${pliki.length ? `<div class="files" id="lista">${pliki.map(p => `
+      <div class="plik" data-id="${p.id}">
+        <button class="mini" data-zobacz="${p.id}" aria-label="Zobacz ${esc(p.nazwa)}">${p.typ === 'pdf' ? '<span class="pdf">PDF</span>' : (linki[p.sciezka] ? `<img src="${esc(linki[p.sciezka])}" alt="${esc(p.nazwa)}" loading="lazy">` : '<span class="pdf">ZDJĘCIE</span>')}</button>
+        <div class="opis"><b>${esc(p.nazwa)}</b><small>Wgrane: ${czas(p.utworzono)}${p.rozmiar ? ' · ' + wielkosc(p.rozmiar) : ''}</small>
+          <div class="acts"><button class="btn" data-zobacz="${p.id}">Zobacz</button><button class="btn2" data-usun="${p.id}">Usuń</button></div></div>
+      </div>`).join('')}</div>`
+    : `<div class="card empty" id="lista"><b>W tym folderze nie ma jeszcze plików.</b><br>Kliknij „Wgraj zdjęcia lub pliki PDF”, żeby dodać pierwszy.</div>`}`;
+  $('#wrocBib').onclick = () => l.grupa ? ekranPodfolderow(fid, l.grupa.k) : ekranBiblioteki(fid);
+  app.querySelectorAll('[data-zobacz]').forEach(b => b.onclick = () => podglad(pliki.find(p => p.id === b.dataset.zobacz), linki));
+  app.querySelectorAll('[data-usun]').forEach(b => b.onclick = () => ekranUsunPlik(fid, lk, pliki.find(p => p.id === b.dataset.usun)));
+  $('#plikiWybor').onchange = e => wgraj(fid, lk, [...e.target.files]);
+}
+
+async function zmniejsz(file){
+  const bmp = await createImageBitmap(file, { imageOrientation:'from-image' });
+  const s = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+  const x = c.getContext('2d'); x.fillStyle = '#f4f1ea'; x.fillRect(0, 0, c.width, c.height);
+  x.drawImage(bmp, 0, 0, c.width, c.height); bmp.close && bmp.close();
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.82));
+  if (!blob) throw new Error('canvas');
+  return (file.type === 'image/jpeg' && file.size <= blob.size) ? file : blob;
+}
+
+async function wgraj(fid, lk, files){
+  if (!files.length) return;
+  const uid = S.user.id; const bledy = []; let ok = 0;
+  const pasekW = (i) => { const w = $('#wgraj'); if (w){ w.textContent = `Wgrywam ${i} z ${files.length}…`; w.classList.add('load'); } };
+  for (let i = 0; i < files.length; i++){
+    pasekW(i + 1);
+    const file = files[i];
+    const pdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    const zdj = !pdf && (file.type.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name));
+    let blob, typ, ext, mime, nazwa = file.name || 'plik';
+    if (pdf){
+      if (file.size > MAX_PDF){ bledy.push(`${nazwa}: plik jest za duży (najwyżej 20 MB).`); continue; }
+      blob = file; typ = 'pdf'; ext = 'pdf'; mime = 'application/pdf';
+    } else if (zdj){
+      try { blob = await zmniejsz(file); } catch(e){ bledy.push(`${nazwa}: nie da się odczytać tego zdjęcia. Zapisz je jako JPG i wgraj jeszcze raz.`); continue; }
+      typ = 'zdjecie'; ext = 'jpg'; mime = 'image/jpeg'; nazwa = nazwa.replace(/\.[^.]+$/, '') + '.jpg';
+    } else { bledy.push(`${nazwa}: to nie jest zdjęcie ani plik PDF.`); continue; }
+    const sciezka = `${uid}/${fid}/${lk}/${crypto.randomUUID()}.${ext}`;
+    const up = await sb.storage.from(SCHOWEK).upload(sciezka, blob, { contentType:mime, upsert:false });
+    if (up.error){ bledy.push(`${nazwa}: ${bladPliku(up.error)}`); continue; }
+    const { error } = await sb.from('pliki').insert({ mieszkanie:fid, folder:lk, nazwa, sciezka, typ, rozmiar:blob.size });
+    if (error){ await sb.storage.from(SCHOWEK).remove([sciezka]); bledy.push(`${nazwa}: ${bladPliku(error)}`); continue; }
+    ok++;
+  }
+  const txt = (ok ? `Wgrano: ${ileP(ok)}.` : '') + (bledy.length ? (ok ? ' ' : '') + 'Nie wgrano: ' + bledy.join(' ') : '');
+  ekranFolderu(fid, lk, txt, !bledy.length);
+}
+
+function podglad(p, linki){
+  const url = linki[p.sciezka];
+  const o = document.createElement('div'); o.className = 'okno'; o.id = 'okno'; o.setAttribute('role', 'dialog');
+  o.innerHTML = `<div class="gora"><b>${esc(p.nazwa)}</b><button class="btn2" id="zamknij">Zamknij</button></div>
+    <div class="info">Podgląd pliku. Kliknij „Zamknij”, żeby wrócić do folderu.</div>
+    <div class="tresc">${!url ? komunikat('Nie udało się otworzyć pliku. Zamknij i spróbuj ponownie.')
+      : p.typ === 'pdf' ? `<iframe src="${esc(url)}" title="${esc(p.nazwa)}"></iframe><a class="btn" id="otworzPdf" href="${esc(url)}" target="_blank" rel="noopener">Otwórz PDF w nowej karcie</a>`
+      : `<img src="${esc(url)}" alt="${esc(p.nazwa)}" id="duze">`}</div>`;
+  document.body.appendChild(o); document.body.style.overflow = 'hidden';
+  const zamknij = () => { o.remove(); document.body.style.overflow = ''; document.removeEventListener('keydown', esc_); };
+  const esc_ = e => { if (e.key === 'Escape') zamknij(); };
+  document.addEventListener('keydown', esc_);
+  $('#zamknij').onclick = zamknij;
+}
+
+function ekranUsunPlik(fid, lk, p, msg){
+  app.innerHTML = `<div class="narrow" style="margin:auto"><h1>Usunąć plik?</h1>
+    <p class="intro">Plik <b>${esc(p.nazwa)}</b> zniknie na stałe z folderu „${esc(LISCIE[lk].n)}”. Tego nie da się cofnąć. Po usunięciu wrócisz do folderu.</p>
+    ${msg ? komunikat(msg) : ''}
+    <div class="acts"><button class="btn2" id="nie">Nie, wróć</button><button class="btn" id="tak">Tak, usuń na stałe</button></div></div>`;
+  $('#nie').onclick = () => ekranFolderu(fid, lk);
+  $('#tak').onclick = async () => {
+    $('#tak').disabled = true;
+    const r = await sb.storage.from(SCHOWEK).remove([p.sciezka]);
+    if (r.error) return ekranUsunPlik(fid, lk, p, bladPliku(r.error));
+    const { error } = await sb.from('pliki').delete().eq('id', p.id);
+    if (error) return ekranUsunPlik(fid, lk, p, bladPliku(error));
+    ekranFolderu(fid, lk, 'Plik ' + p.nazwa + ' został usunięty.');
+  };
+}
+
+async function ilePlikowMieszkania(fid){
+  const { data, error } = await sb.from('pliki').select('id').eq('mieszkanie', fid);
+  return error ? 0 : (data || []).length;   // bez Biblioteki w bazie: zero plików; baza i tak nie pozwoli usunąć mieszkania z plikami
+}
+
+function ekranUsunZablokowane(f, n){
+  app.innerHTML = `<div class="narrow" style="margin:auto"><h1>Najpierw usuń pliki</h1>
+    <p class="intro">Mieszkania <b>${esc(f.ulica)}</b> nie można teraz usunąć, bo w jego Bibliotece jest ${ileP(n)}. Najpierw usuń wszystkie pliki z Biblioteki, potem wróć tutaj i usuń mieszkanie.</p>
+    <div class="acts"><button class="btn2" id="nie">Wróć do mieszkania</button><button class="btn" id="doBib">Otwórz Bibliotekę</button></div></div>`;
+  $('#nie').onclick = () => ekranMieszkania(f.id);
+  $('#doBib').onclick = () => ekranBiblioteki(f.id);
 }
 
 start();
