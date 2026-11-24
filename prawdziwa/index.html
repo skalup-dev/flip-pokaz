@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flip</title>
+<style>
+:root{--k:#f4f1ea;--c:#1E1A17;--z:#B8924A}
+*{box-sizing:border-box}
+body{margin:0;background:var(--k);color:var(--c);font:15px/1.45 -apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+button{font:inherit;cursor:pointer}
+input,textarea{font:inherit;color:var(--c);background:var(--k);border:1px solid var(--c);border-radius:8px;padding:10px;width:100%}
+label{display:block;font-weight:600;margin:10px 0 4px}
+label small{font-weight:400}
+.top{position:sticky;top:0;z-index:20;background:var(--c);color:var(--k);display:flex;align-items:center;gap:10px;padding:10px 16px}
+.logo{font-weight:700;letter-spacing:.5px;color:var(--z);font-size:18px;cursor:pointer}
+.top .sp{flex:1}
+.top .who{font-size:13px;opacity:.9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45vw}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+.narrow{max-width:440px}
+h1{font-size:22px;margin:0 0 6px}h2{font-size:18px;margin:16px 0 8px}
+.intro{margin:0 0 14px}
+.btn{background:var(--c);color:var(--z);border:none;border-radius:10px;padding:12px 14px;font-weight:600}
+.btn2{background:transparent;color:var(--c);border:1px solid var(--c);border-radius:10px;padding:11px 14px;font-weight:600}
+.btnT{background:none;border:none;color:var(--c);text-decoration:underline;padding:6px 0}
+.top .btn2{color:var(--k);border-color:var(--z);padding:6px 10px}
+.full{width:100%}
+.card{border:1px solid var(--z);border-radius:12px;padding:14px;margin-bottom:10px}
+.card.dark{background:var(--c);color:var(--k);border-color:var(--c)}
+.grid{display:grid;gap:10px}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:1fr 1fr}
+.kpi small{display:block;font-size:12px}.kpi div{font-weight:700;font-size:19px}
+.flat{cursor:pointer;display:block;width:100%;text-align:left;background:transparent;color:var(--c)}
+.flat b{font-size:17px}
+.flat .meta{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px;margin-top:4px}
+.late{font-weight:700}
+.late::before{content:"! ";display:inline-block;background:var(--c);color:var(--k);border-radius:50%;width:17px;height:17px;text-align:center;line-height:17px;font-size:12px;margin-right:4px}
+.row{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--z)}
+.row:last-child{border-bottom:none}
+.msg{border:2px solid var(--c);border-radius:10px;padding:10px;margin:10px 0;font-weight:600}
+.msg.info{border-color:var(--z)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.acts > *{flex:1;min-width:140px}
+.hide{display:none!important}
+.empty{text-align:center;padding:28px 14px}
+.load{opacity:.6;pointer-events:none}
+@media (max-width:640px){.g3{grid-template-columns:1fr 1fr}.g3 .kpi:last-child{grid-column:1/-1}.g2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="logo" id="logo">FLIP</span><span class="sp"></span>
+  <span class="who hide" id="who"></span>
+  <button class="btn2 hide" id="wyloguj">Wyloguj</button>
+</div>
+<div class="wrap" id="app"></div>
+
+<script src="config.js"></script>
+<script src="supabase.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const app = $('#app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const zl = n => n == null ? '–' : new Intl.NumberFormat('pl-PL',{maximumFractionDigits:2}).format(n).replace(/ /g,' ') + ' zł';
+const m2 = n => n == null ? '–' : new Intl.NumberFormat('pl-PL',{maximumFractionDigits:2}).format(n).replace(/ /g,' ') + ' m²';
+const dt = d => d ? d.split('-').reverse().join('.') : '–';
+const dzis = () => new Date().toISOString().slice(0,10);
+const liczba = v => { v = String(v).trim().replace(/\s/g,'').replace(',','.'); if (!v) return null; const n = Number(v); return isNaN(n) ? NaN : n; };
+
+const BLEDY = {
+  'Invalid login credentials':'Zły e-mail albo hasło.',
+  'Email not confirmed':'Konto nie jest jeszcze potwierdzone. Kliknij link w mailu, który przyszedł po rejestracji.',
+  'User already registered':'Konto z tym e-mailem już istnieje. Zaloguj się albo użyj „Nie pamiętam hasła”.',
+  'Password should be at least 6 characters':'Hasło musi mieć co najmniej 8 znaków.',
+  'Failed to fetch':'Brak połączenia z internetem. Spróbuj ponownie.',
+  'Unable to validate email address: invalid format':'Ten e-mail ma zły format.'
+};
+const blad = e => { const m = (e && (e.message || e.error_description)) || String(e); for (const k in BLEDY) if (m.includes(k)) return BLEDY[k]; if (/rate limit/i.test(m)) return 'Za dużo prób. Odczekaj chwilę i spróbuj ponownie.'; return 'Coś poszło nie tak: ' + m; };
+
+const S = { user:null, flats:[], tryb:'logowanie' };
+let sb = null;
+
+function komunikat(txt, info){ return `<div class="msg ${info?'info':''}" role="alert">${esc(txt)}</div>`; }
+
+/* ---------- start ---------- */
+function start(){
+  const cfg = window.FLIP_CFG || {};
+  if (!cfg.url || !cfg.key || !window.supabase){
+    app.innerHTML = `<div class="narrow" style="margin:auto"><h1>Aplikacja nie jest jeszcze podłączona</h1>
+      <p class="intro">Brakuje połączenia z bazą danych. Gdy zostanie podłączona, tutaj pojawi się logowanie.</p></div>`;
+    return;
+  }
+  sb = window.supabase.createClient(cfg.url, cfg.key);
+  sb.auth.onAuthStateChange((ev, session) => {
+    if (ev === 'PASSWORD_RECOVERY'){ S.recovery = true; S.user = session?.user || null; pasek(); ekranNoweHaslo(); return; }
+    const u = session?.user || null;
+    const zmiana = (u?.id || null) !== (S.user?.id || null);
+    S.user = u; pasek();
+    if (zmiana || ev === 'INITIAL_SESSION') u ? wczytaj() : ekranLogowania();
+  });
+}
+
+function pasek(){
+  $('#who').textContent = S.user ? S.user.email : '';
+  $('#who').classList.toggle('hide', !S.user);
+  $('#wyloguj').classList.toggle('hide', !S.user);
+}
+$('#wyloguj').onclick = async () => { await sb.auth.signOut(); S.flats = []; };
+$('#logo').onclick = () => S.user ? ekranListy() : ekranLogowania();
+
+/* ---------- logowanie ---------- */
+function ekranLogowania(msg, info){
+  const t = S.tryb;
+  const tytul = {logowanie:'Logowanie', rejestracja:'Załóż konto', reset:'Nie pamiętam hasła'}[t];
+  const opis = {
+    logowanie:'Zaloguj się, żeby zobaczyć swoje mieszkania. Po zalogowaniu otworzy się lista mieszkań.',
+    rejestracja:'Załóż konto Właściciela aplikacji. Po założeniu przyjdzie mail z linkiem do potwierdzenia, a potem możesz się zalogować.',
+    reset:'Wpisz e-mail konta. Przyjdzie mail z linkiem, po kliknięciu ustawisz nowe hasło.'
+  }[t];
+  app.innerHTML = `<div class="narrow" style="margin:auto">
+    <h1>${tytul}</h1><p class="intro">${opis}</p>
+    ${msg ? komunikat(msg, info) : ''}
+    <form id="f" novalidate>
+      ${t==='rejestracja' ? `<label for="imie">Imię</label><input id="imie" autocomplete="given-name">` : ''}
+      <label for="email">E-mail</label><input id="email" type="email" autocomplete="email" required>
+      ${t!=='reset' ? `<label for="haslo">Hasło ${t==='rejestracja'?'<small>(co najmniej 8 znaków)</small>':''}</label>
+        <input id="haslo" type="password" autocomplete="${t==='rejestracja'?'new-password':'current-password'}" required>` : ''}
+      ${t==='rejestracja' ? `<label for="haslo2">Powtórz hasło</label><input id="haslo2" type="password" autocomplete="new-password">` : ''}
+      <button class="btn full" style="margin-top:16px" id="wyslij">${{logowanie:'Zaloguj',rejestracja:'Załóż konto',reset:'Wyślij link'}[t]}</button>
+    </form>
+    <div style="margin-top:12px">
+      ${t!=='logowanie' ? `<button class="btnT" data-t="logowanie">Mam konto – zaloguj się</button><br>` : ''}
+      ${t!=='rejestracja' ? `<button class="btnT" data-t="rejestracja">Nie masz konta? Załóż konto</button><br>` : ''}
+      ${t!=='reset' ? `<button class="btnT" data-t="reset">Nie pamiętam hasła</button>` : ''}
+    </div></div>`;
+  app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { S.tryb = b.dataset.t; ekranLogowania(); });
+  $('#f').onsubmit = async e => {
+    e.preventDefault();
+    const email = $('#email').value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return ekranLogowaniaZ('Wpisz poprawny e-mail.');
+    const f = $('#f'); f.classList.add('load');
+    try{
+      if (t === 'logowanie'){
+        const haslo = $('#haslo').value;
+        if (!haslo) { f.classList.remove('load'); return ekranLogowaniaZ('Wpisz hasło.', email); }
+        const { error } = await sb.auth.signInWithPassword({ email, password: haslo });
+        if (error) throw error;
+      } else if (t === 'rejestracja'){
+        const haslo = $('#haslo').value, h2 = $('#haslo2').value, imie = $('#imie').value.trim();
+        if (haslo.length < 8) { f.classList.remove('load'); return ekranLogowaniaZ('Hasło musi mieć co najmniej 8 znaków.', email, imie); }
+        if (haslo !== h2) { f.classList.remove('load'); return ekranLogowaniaZ('Hasła nie są takie same.', email, imie); }
+        const { data, error } = await sb.auth.signUp({ email, password: haslo, options:{ data:{ imie }, emailRedirectTo: location.origin + location.pathname } });
+        if (error) throw error;
+        if (!data.session){ S.tryb = 'logowanie'; ekranLogowania('Konto założone. Sprawdź skrzynkę ' + email + ' i kliknij link w mailu, potem zaloguj się tutaj.', true); }
+      } else {
+        const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+        if (error) throw error;
+        S.tryb = 'logowanie'; ekranLogowania('Jeśli konto istnieje, na ' + email + ' przyszedł mail z linkiem do zmiany hasła.', true);
+      }
+    } catch(err){ f.classList.remove('load'); ekranLogowaniaZ(blad(err), email); }
+  };
+}
+function ekranLogowaniaZ(msg, email, imie){ ekranLogowania(msg); if (email) $('#email').value = email; if (imie && $('#imie')) $('#imie').value = imie; }
+
+function ekranNoweHaslo(msg){
+  app.innerHTML = `<div class="narrow" style="margin:auto"><h1>Ustaw nowe hasło</h1>
+    <p class="intro">Wpisz nowe hasło. Po zapisaniu otworzy się lista mieszkań.</p>${msg?komunikat(msg):''}
+    <form id="f"><label for="haslo">Nowe hasło <small>(co najmniej 8 znaków)</small></label><input id="haslo" type="password" autocomplete="new-password">
+    <label for="haslo2">Powtórz hasło</label><input id="haslo2" type="password" autocomplete="new-password">
+    <button class="btn full" style="margin-top:16px">Zapisz nowe hasło</button></form></div>`;
+  $('#f').onsubmit = async e => {
+    e.preventDefault();
+    const h = $('#haslo').value;
+    if (h.length < 8) return ekranNoweHaslo('Hasło musi mieć co najmniej 8 znaków.');
+    if (h !== $('#haslo2').value) return ekranNoweHaslo('Hasła nie są takie same.');
+    const { error } = await sb.auth.updateUser({ password: h });
+    if (error) return ekranNoweHaslo(blad(error));
+    S.recovery = false; pasek(); wczytaj('Nowe hasło zapisane.');
+  };
+}
+
+/* ---------- mieszkania ---------- */
+async function wczytaj(msg){
+  app.innerHTML = '<p>Wczytuję mieszkania…</p>';
+  const { data, error } = await sb.from('mieszkania').select('*');
+  if (error){ app.innerHTML = komunikat(blad(error)) + '<button class="btn" id="ponow">Spróbuj ponownie</button>'; $('#ponow').onclick = () => wczytaj(); return; }
+  S.flats = (data || []).sort((a,b) => a.ulica.localeCompare(b.ulica, 'pl', {numeric:true}));
+  ekranListy(msg);
+}
+
+const spozn = f => f.termin_konca && f.termin_konca < dzis();
+
+function ekranListy(msg){
+  if (S.recovery) return;
+  const fl = S.flats;
+  const budzet = fl.reduce((s,f) => s + (Number(f.budzet) || 0), 0);
+  const late = fl.filter(spozn).length;
+  app.innerHTML = `<h1>Moje mieszkania</h1>
+    <p class="intro">Tu są wszystkie mieszkania Właściciela aplikacji, zapisane na stałe. Kliknij mieszkanie, żeby zobaczyć szczegóły, albo dodaj nowe.</p>
+    ${msg ? komunikat(msg, true) : ''}
+    <div class="grid g3" style="margin-bottom:12px">
+      <div class="card dark kpi"><small>Mieszkania</small><div id="kpiN">${fl.length}</div></div>
+      <div class="card dark kpi"><small>Budżet razem</small><div id="kpiB">${zl(budzet)}</div></div>
+      <div class="card dark kpi"><small>Po terminie</small><div id="kpiL">${late}</div></div>
+    </div>
+    <button class="btn full" id="dodaj" style="margin-bottom:14px">+ Dodaj mieszkanie</button>
+    <div id="lista">${fl.length ? fl.map(f => `
+      <button class="card flat" data-id="${f.id}">
+        <b>${esc(f.ulica)}</b>${f.miasto ? `, ${esc(f.miasto)}` : ''}
+        <div class="meta"><span>Metraż: ${m2(f.metraz)}</span><span>Budżet: ${zl(f.budzet)}</span>
+        <span class="${spozn(f)?'late':''}">Termin końca: ${dt(f.termin_konca)}${spozn(f)?' – po terminie':''}</span></div>
+      </button>`).join('') : `<div class="card empty"><b>Nie ma jeszcze żadnego mieszkania.</b><br>Kliknij „Dodaj mieszkanie”, żeby dodać pierwsze.</div>`}</div>`;
+  $('#dodaj').onclick = () => ekranFormularza();
+  app.querySelectorAll('.flat').forEach(b => b.onclick = () => ekranMieszkania(b.dataset.id));
+}
+
+function ekranMieszkania(id, msg){
+  const f = S.flats.find(x => x.id === id); if (!f) return ekranListy();
+  app.innerHTML = `<button class="btnT" id="wroc">← Moje mieszkania</button>
+    <h1>${esc(f.ulica)}</h1><p class="intro">Dane mieszkania. Możesz je zmienić albo usunąć mieszkanie.</p>
+    ${msg ? komunikat(msg, true) : ''}
+    <div class="card">
+      <div class="row"><span>Ulica i numer</span><b>${esc(f.ulica)}</b></div>
+      <div class="row"><span>Miasto</span><b>${esc(f.miasto) || '–'}</b></div>
+      <div class="row"><span>Metraż</span><b>${m2(f.metraz)}</b></div>
+      <div class="row"><span>Budżet remontu</span><b>${zl(f.budzet)}</b></div>
+      <div class="row"><span>Data startu remontu</span><b>${dt(f.data_startu)}</b></div>
+      <div class="row"><span>Termin końca</span><b class="${spozn(f)?'late':''}">${dt(f.termin_konca)}</b></div>
+      ${f.opis ? `<div class="row"><span>Opis</span><b style="white-space:pre-wrap;text-align:right">${esc(f.opis)}</b></div>` : ''}
+    </div>
+    <div class="card"><b>Co będzie dalej</b><br>W kolejnych krokach dojdą tu: Biblioteka (zdjęcia, plany, faktury), Lista prac, Terminy, Płatności i Chat z firmą.</div>
+    <div class="acts"><button class="btn" id="zmien">Zmień dane</button><button class="btn2" id="usun">Usuń mieszkanie</button></div>`;
+  $('#wroc').onclick = () => ekranListy();
+  $('#zmien').onclick = () => ekranFormularza(f);
+  $('#usun').onclick = () => ekranUsun(f);
+}
+
+function ekranUsun(f, msg){
+  app.innerHTML = `<div class="narrow" style="margin:auto"><h1>Usunąć mieszkanie?</h1>
+    <p class="intro">Mieszkanie <b>${esc(f.ulica)}</b> zniknie na stałe razem z jego danymi. Tego nie da się cofnąć.</p>
+    ${msg?komunikat(msg):''}
+    <div class="acts"><button class="btn2" id="nie">Nie, wróć</button><button class="btn" id="tak">Tak, usuń na stałe</button></div></div>`;
+  $('#nie').onclick = () => ekranMieszkania(f.id);
+  $('#tak').onclick = async () => {
+    $('#tak').disabled = true;
+    const { error } = await sb.from('mieszkania').delete().eq('id', f.id);
+    if (error) return ekranUsun(f, blad(error));
+    wczytaj('Mieszkanie ' + f.ulica + ' zostało usunięte.');
+  };
+}
+
+function ekranFormularza(f, msg, wpis){
+  const n = !f; const v = wpis || f || {};
+  const pole = (id, txt, typ='text', extra='') => `<label for="${id}">${txt}</label><input id="${id}" type="${typ}" value="${esc(v[id] ?? '')}" ${extra}>`;
+  app.innerHTML = `<button class="btnT" id="wroc">← ${n ? 'Moje mieszkania' : 'Wróć do mieszkania'}</button>
+    <div class="narrow"><h1>${n ? 'Dodaj mieszkanie' : 'Zmień dane mieszkania'}</h1>
+    <p class="intro">${n ? 'Wpisz dane nowego mieszkania. Po zapisaniu pojawi się na liście mieszkań.' : 'Popraw dane. Po zapisaniu wrócisz do mieszkania.'} Wymagana jest tylko ulica i numer, resztę można dopisać później.</p>
+    ${msg ? komunikat(msg) : ''}
+    <form id="f" novalidate>
+      ${pole('ulica','Ulica i numer *','text','placeholder="np. Krasińskiego 3/4"')}
+      ${pole('miasto','Miasto')}
+      <div class="grid g2">${pole('metraz','Metraż (m²)','text','inputmode="decimal"')}${pole('budzet','Budżet remontu (zł)','text','inputmode="decimal"')}</div>
+      <div class="grid g2">${pole('data_startu','Data startu remontu','date')}${pole('termin_konca','Termin końca','date')}</div>
+      <label for="opis">Opis <small>(nieobowiązkowy)</small></label><textarea id="opis" rows="3">${esc(v.opis ?? '')}</textarea>
+      <button class="btn full" style="margin-top:16px" id="zapisz">${n ? 'Zapisz mieszkanie' : 'Zapisz zmiany'}</button>
+    </form></div>`;
+  $('#wroc').onclick = () => n ? ekranListy() : ekranMieszkania(f.id);
+  $('#f').onsubmit = async e => {
+    e.preventDefault();
+    const w = { ulica:$('#ulica').value.trim(), miasto:$('#miasto').value.trim() || null,
+      metraz:liczba($('#metraz').value), budzet:liczba($('#budzet').value),
+      data_startu:$('#data_startu').value || null, termin_konca:$('#termin_konca').value || null,
+      opis:$('#opis').value.trim() || null };
+    const raw = { ...w, metraz:$('#metraz').value, budzet:$('#budzet').value };
+    if (!w.ulica) return ekranFormularza(f, 'Wpisz ulicę i numer.', raw);
+    if (Number.isNaN(w.metraz) || (w.metraz != null && w.metraz <= 0)) return ekranFormularza(f, 'Metraż musi być liczbą większą od zera, np. 50 albo 48,5.', raw);
+    if (Number.isNaN(w.budzet) || (w.budzet != null && w.budzet < 0)) return ekranFormularza(f, 'Budżet musi być liczbą, np. 120000.', raw);
+    if (w.data_startu && w.termin_konca && w.termin_konca < w.data_startu) return ekranFormularza(f, 'Termin końca nie może być wcześniej niż data startu.', raw);
+    $('#f').classList.add('load');
+    const q = n ? sb.from('mieszkania').insert(w).select().single() : sb.from('mieszkania').update(w).eq('id', f.id).select().single();
+    const { data, error } = await q;
+    if (error) return ekranFormularza(f, blad(error), raw);
+    if (n){ S.flats.push(data); } else { Object.assign(S.flats.find(x => x.id === f.id), data); }
+    S.flats.sort((a,b) => a.ulica.localeCompare(b.ulica, 'pl', {numeric:true}));
+    n ? ekranListy('Mieszkanie ' + data.ulica + ' zapisane.') : ekranMieszkania(f.id, 'Zmiany zapisane.');
+  };
+}
+
+start();
+</script>
+</body>
+</html>
