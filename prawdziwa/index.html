@@ -150,7 +150,7 @@ function pasek(){
 }
 $('#wyloguj').onclick = async () => { await sb.auth.signOut(); S.flats = []; S.profil = null; pasek(); };
 $('#mojeDane').onclick = () => ekranMojeDane();
-$('#logo').onclick = () => S.user ? ekranListy() : ekranLogowania();
+$('#logo').onclick = () => { const cel = () => S.user ? ekranListy() : ekranLogowania(); S.wyjscieZDanych ? S.wyjscieZDanych(cel) : cel(); };
 
 /* ---------- logowanie ---------- */
 function ekranLogowania(msg, info){
@@ -227,7 +227,7 @@ function ekranNoweHaslo(msg){
 async function wczytaj(msg){
   app.innerHTML = '<p>Wczytuję mieszkania…</p>';
   const [{ data, error }, pr] = await Promise.all([ sb.from('mieszkania').select('*'), sb.from('profile').select('*').eq('id', S.user.id) ]);
-  S.profil = (pr && pr.data && pr.data[0]) || null; pasek();
+  if (pr && !pr.error) S.profil = (pr.data && pr.data[0]) || null; pasek();
   if (error){ app.innerHTML = komunikat(blad(error)) + '<button class="btn" id="ponow">Spróbuj ponownie</button>'; $('#ponow').onclick = () => wczytaj(); return; }
   S.flats = (data || []).sort((a,b) => a.ulica.localeCompare(b.ulica, 'pl', {numeric:true}));
   ekranListy(msg);
@@ -237,6 +237,7 @@ const spozn = f => f.termin_konca && f.termin_konca < dzis();
 
 function ekranListy(msg){
   if (S.recovery) return;
+  S.wyjscieZDanych = null;
   const fl = S.flats;
   const budzet = fl.reduce((s,f) => s + (Number(f.budzet) || 0), 0);
   const late = fl.filter(spozn).length;
@@ -351,9 +352,13 @@ function ekranMojeDane(msg, wpis){
       <label for="nazwa_firmy">Nazwa firmy <small>(nieobowiązkowo)</small></label><input id="nazwa_firmy" maxlength="80" autocomplete="organization" value="${esc(v.nazwa_firmy ?? '')}">
       <button class="btn full" style="margin-top:16px" id="zapiszDane">Zapisz dane</button>
     </form></div>`;
-  $('#wroc').onclick = () => ekranListy();
+  const zapisane = { imie:(S.profil && S.profil.imie) || '', nazwa_firmy:(S.profil && S.profil.nazwa_firmy) || '' };
+  const zmienione = () => { const i = $('#imie'), n = $('#nazwa_firmy'); return !!i && !!n && (i.value.trim() !== zapisane.imie.trim() || n.value.trim() !== zapisane.nazwa_firmy.trim()); };
+  S.wyjscieZDanych = cel => { if (!zmienione()) { S.wyjscieZDanych = null; return cel(); } ekranNiezapisane({ imie:$('#imie').value, nazwa_firmy:$('#nazwa_firmy').value }, cel); };
+  $('#wroc').onclick = () => S.wyjscieZDanych(ekranListy);
   $('#f').onsubmit = async e => {
     e.preventDefault();
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();   // zatwierdza ostatnie słowo z klawiatury telefonu
     const w = { imie:$('#imie').value.trim() || null, nazwa_firmy:$('#nazwa_firmy').value.trim() || null };
     if (w.imie && w.imie.length > 40) return ekranMojeDane('Imię może mieć najwyżej 40 znaków.', w);
     if (w.nazwa_firmy && w.nazwa_firmy.length > 80) return ekranMojeDane('Nazwa firmy może mieć najwyżej 80 znaków.', w);
@@ -361,9 +366,19 @@ function ekranMojeDane(msg, wpis){
     const { data, error } = await sb.from('profile').update(w).eq('id', S.user.id).select();
     if (error) return ekranMojeDane(/nazwa_firmy|column/i.test(error.message || '') ? 'Moje dane nie są jeszcze włączone w bazie danych. Trzeba wgrać plik 03_moje_dane.sql w Supabase.' : blad(error), w);
     if (!data || !data.length) return ekranMojeDane('Nie udało się zapisać danych, bo w bazie brakuje profilu tego konta. Trzeba wgrać plik 03_moje_dane.sql w Supabase.', w);
-    S.profil = data[0]; pasek();
-    ekranListy('Dane zapisane.');
+    const z = data[0];
+    if ((z.imie || null) !== w.imie || (z.nazwa_firmy || null) !== w.nazwa_firmy) return ekranMojeDane('Baza nie zapisała danych tak, jak zostały wpisane. Trzeba spróbować ponownie.', w);
+    S.profil = z; S.wyjscieZDanych = null; pasek();
+    ekranListy('Dane zapisane. Imię: ' + (z.imie || 'brak, więc w tekstach jest „Właściciel aplikacji”') + '. Nazwa firmy: ' + (z.nazwa_firmy || 'brak, więc w pasku zostaje „FLIP”') + '.');
   };
+}
+
+function ekranNiezapisane(wpis, cel){
+  app.innerHTML = `<div class="narrow" style="margin:auto"><h1>Zapisać zmiany?</h1>
+    <p class="intro">W „Moje dane” są zmiany, które nie zostały zapisane. Po kliknięciu „Zapisz dane” zmiany trafią do bazy. Po kliknięciu „Nie zapisuj” zmiany przepadną.</p>
+    <div class="acts"><button class="btn2" id="nie">Nie zapisuj</button><button class="btn" id="tak">Zapisz dane</button></div></div>`;
+  $('#nie').onclick = () => { S.wyjscieZDanych = null; cel(); };
+  $('#tak').onclick = () => { ekranMojeDane(null, wpis); $('#f').requestSubmit ? $('#f').requestSubmit() : $('#zapiszDane').click(); };
 }
 
 /* ---------- Biblioteka ---------- */
