@@ -40,6 +40,8 @@
         update(v){ q.op = 'update'; q.val = v; return b; },
         delete(){ q.op = 'delete'; return b; },
         eq(c,v){ q.filt.push([c,v]); return b; },
+        in(c,vs){ q.inn = q.inn || []; q.inn.push([c,vs]); return b; },
+        order(){ return b; },
         single(){ q.one = true; return b; },
         then(res, rej){ return run().then(res, rej); }
       };
@@ -47,7 +49,7 @@
         if (L('mock_offline')) return { data:null, error:{ message:'Failed to fetch' } };
         const s = sess(); if (!s) return { data:null, error:{ message:'permission denied for table ' + t } };
         let all = L('mock_' + t) || [];
-        const mine = r => r.wlasciciel === s.user.id && q.filt.every(([c,v]) => r[c] === v);
+        const mine = r => r.wlasciciel === s.user.id && q.filt.every(([c,v]) => r[c] === v) && (q.inn||[]).every(([c,vs]) => vs.includes(r[c]));
         if (q.op === 'select') return { data: all.filter(mine), error:null };
         if (q.op === 'insert'){
           const v = q.val;

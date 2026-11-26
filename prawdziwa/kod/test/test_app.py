@@ -26,6 +26,7 @@ async def dodaj(pg, **v):
     for k, x in v.items():
         await pg.fill('#' + k, x)
     await pg.click('#zapisz')
+    await expect(pg.locator('.msg')).to_contain_text('zapisane'); await pg.click('#wroc')
 
 async def scen(b, name, vp):
     shot = lambda n: f'{ROOT}/test/shot_{name}_{n}.png'
@@ -71,6 +72,7 @@ async def scen(b, name, vp):
     await expect(pg.locator('.msg')).to_contain_text('Termin końca nie może'); ok(name+' formularz błędy')
     await pg.fill('#data_startu','2026-11-17'); await pg.fill('#termin_konca','2027-01-30'); await pg.fill('#miasto','Sosnowiec'); await pg.click('#zapisz')
     await expect(pg.locator('.msg')).to_contain_text('Mieszkanie Krasińskiego 3/4 zapisane')
+    await pg.click('#wroc')
     await expect(pg.locator('#kpiN')).to_have_text('1'); await expect(pg.locator('#kpiB')).to_have_text('120 000 zł')
     await expect(pg.locator('.flat')).to_contain_text('48,5 m²'); ok(name+' dodanie mieszkania')
     await dodaj(pg, ulica='Łódzka 2', budzet='50000')

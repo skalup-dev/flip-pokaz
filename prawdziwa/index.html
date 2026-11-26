@@ -46,6 +46,31 @@ h1{font-size:22px;margin:0 0 6px}h2{font-size:18px;margin:16px 0 8px}
 .logo{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .btn2{flex:none;white-space:nowrap}
 .stopka{text-align:center;font-size:13px;padding:18px 16px 24px}
+/* ---------- Dodaj mieszkanie krokami ---------- */
+.kroki{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+.kroki span{border:1px solid var(--c);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600}
+.kroki .zrob{background:var(--c);color:var(--z);border-color:var(--c)}
+.kroki .teraz{border:2px solid var(--z)}
+.slot{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.slot small{display:block}
+.slot .wgraj{flex:none}
+.pliki-lista{margin:8px 0 0;padding:0;list-style:none;font-size:14px}
+.pliki-lista li{padding:4px 0;border-top:1px solid var(--z);word-break:break-word}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chips button{background:transparent;border:1px solid var(--c);border-radius:999px;padding:8px 14px;font-weight:600;color:var(--c)}
+.pom{display:grid;grid-template-columns:1fr 110px auto;gap:8px;align-items:end;padding:8px 0;border-bottom:1px solid var(--z)}
+.pom:last-child{border-bottom:none}
+.pom label{margin:0 0 4px;font-size:13px}
+.etap{margin:12px 0 4px;font-weight:700}
+.kr{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--z)}
+.kr input{width:20px;height:20px;accent-color:#1E1A17;flex:none;padding:0}
+.kr label{flex:1;margin:0;font-weight:400}
+.kr .btn2{padding:4px 10px;font-size:13px}
+.zw{display:flex;justify-content:space-between;align-items:center;gap:8px}
+button.zw{width:100%;background:transparent;border:none;padding:0;color:var(--c);text-align:left}
+.dop{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-top:10px}
+.dop select{width:100%;padding:10px;border:1px solid var(--c);border-radius:8px;background:var(--k);color:var(--c);font:inherit}
+@media (max-width:640px){.pom{grid-template-columns:1fr 90px}.pom .btn2{grid-column:1/-1}.dop{grid-template-columns:1fr}}
 .stopka b{color:var(--z)}
 @media (max-width:480px){.top .who{display:none}.top{gap:8px;padding:10px 12px}.logo{font-size:16px}.top .btn2{padding:6px 8px}}
 @media (max-width:640px){.g3{grid-template-columns:1fr 1fr}.g3 .kpi:last-child{grid-column:1/-1}.g2{grid-template-columns:1fr}}
@@ -237,7 +262,7 @@ const spozn = f => f.termin_konca && f.termin_konca < dzis();
 
 function ekranListy(msg){
   if (S.recovery) return;
-  S.wyjscieZDanych = null;
+  S.wyjscieZDanych = null; S.kreator = null;
   const fl = S.flats;
   const budzet = fl.reduce((s,f) => s + (Number(f.budzet) || 0), 0);
   const late = fl.filter(spozn).length;
@@ -256,7 +281,7 @@ function ekranListy(msg){
         <div class="meta"><span>Metraż: ${m2(f.metraz)}</span><span>Budżet: ${zl(f.budzet)}</span>
         <span class="${spozn(f)?'late':''}">Termin końca: ${dt(f.termin_konca)}${spozn(f)?' – po terminie':''}</span></div>
       </button>`).join('') : `<div class="card empty"><b>Nie ma jeszcze żadnego mieszkania.</b><br>Po kliknięciu „Dodaj mieszkanie” można dodać pierwsze.</div>`}</div>`;
-  $('#dodaj').onclick = () => ekranFormularza();
+  $('#dodaj').onclick = () => { S.kreator = null; ekranFormularza(); };
   app.querySelectorAll('.flat').forEach(b => b.onclick = () => ekranMieszkania(b.dataset.id));
 }
 
@@ -300,12 +325,12 @@ function ekranUsun(f, msg){
   };
 }
 
-function ekranFormularza(f, msg, wpis){
-  const n = !f; const v = wpis || f || {};
+function ekranFormularza(f, msg, wpis, krok1){
+  const n = !f; const k1 = n || !!krok1; const v = wpis || f || {};
   const pole = (id, txt, typ='text', extra='') => `<label for="${id}">${txt}</label><input id="${id}" type="${typ}" value="${esc(v[id] ?? '')}" ${extra}>`;
-  app.innerHTML = `<button class="btnT" id="wroc">← ${n ? 'Moje mieszkania' : 'Wróć do mieszkania'}</button>
-    <div class="narrow"><h1>${n ? 'Nowe mieszkanie' : 'Zmiana danych mieszkania'}</h1>
-    <p class="intro">${n ? 'Tu wpisuje się dane nowego mieszkania. Po zapisaniu pojawi się ono na liście mieszkań.' : 'Tu poprawia się dane mieszkania. Po zapisaniu otworzy się znowu ekran mieszkania.'} Wymagana jest tylko ulica i numer, resztę można dopisać później.</p>
+  app.innerHTML = `<button class="btnT" id="wroc">← ${k1 ? 'Moje mieszkania' : 'Wróć do mieszkania'}</button>
+    <div class="narrow"><h1>${k1 ? 'Nowe mieszkanie' : 'Zmiana danych mieszkania'}</h1>${k1 ? kroki(1) : ''}
+    <p class="intro">${k1 ? `Krok 1 z 4. Tu ${esc(kto())} wpisuje dane nowego mieszkania. Wymagana jest tylko ulica i numer, resztę można dopisać później. Po kliknięciu „Dalej: pliki” mieszkanie zapisze się, a następny krok to pliki.` : 'Tu poprawia się dane mieszkania. Po zapisaniu otworzy się znowu ekran mieszkania. Wymagana jest tylko ulica i numer, resztę można dopisać później.'}</p>
     ${msg ? komunikat(msg) : ''}
     <form id="f" novalidate>
       ${pole('ulica','Ulica i numer *','text','placeholder="np. Krasińskiego 3/4"')}
@@ -314,9 +339,11 @@ function ekranFormularza(f, msg, wpis){
       <div class="grid g2">${pole('metraz','Metraż (m²)','text','inputmode="decimal"')}${pole('budzet','Budżet remontu (zł)','text','inputmode="decimal"')}</div>
       <div class="grid g2">${pole('data_startu','Data startu remontu','date')}${pole('termin_konca','Termin końca','date')}</div>
       <label for="opis">Opis <small>(nieobowiązkowy)</small></label><textarea id="opis" rows="3">${esc(v.opis ?? '')}</textarea>
-      <button class="btn full" style="margin-top:16px" id="zapisz">${n ? 'Zapisz mieszkanie' : 'Zapisz zmiany'}</button>
+      ${k1 ? `<div class="acts"><button type="button" class="btn2" id="anuluj">Anuluj</button><button class="btn" id="zapisz">Dalej: pliki</button></div>` : `<button class="btn full" style="margin-top:16px" id="zapisz">Zapisz zmiany</button>`}
     </form></div>`;
-  $('#wroc').onclick = () => n ? ekranListy() : ekranMieszkania(f.id);
+  const doListy = () => S.wyjscieZDanych ? S.wyjscieZDanych(ekranListy) : ekranListy();
+  $('#wroc').onclick = () => k1 ? doListy() : ekranMieszkania(f.id);
+  if (k1) $('#anuluj').onclick = doListy;
   $('#f').onsubmit = async e => {
     e.preventDefault();
     const w = { ulica:$('#ulica').value.trim(), miasto:$('#miasto').value.trim() || null,
@@ -325,17 +352,170 @@ function ekranFormularza(f, msg, wpis){
       data_startu:$('#data_startu').value || null, termin_konca:$('#termin_konca').value || null,
       opis:$('#opis').value.trim() || null };
     const raw = { ...w, metraz:$('#metraz').value, budzet:$('#budzet').value };
-    if (!w.ulica) return ekranFormularza(f, 'Trzeba wpisać ulicę i numer.', raw);
-    if (Number.isNaN(w.metraz) || (w.metraz != null && w.metraz <= 0)) return ekranFormularza(f, 'Metraż musi być liczbą większą od zera, np. 50 albo 48,5.', raw);
-    if (Number.isNaN(w.budzet) || (w.budzet != null && w.budzet < 0)) return ekranFormularza(f, 'Budżet musi być liczbą, np. 120000.', raw);
-    if (w.data_startu && w.termin_konca && w.termin_konca < w.data_startu) return ekranFormularza(f, 'Termin końca nie może być wcześniej niż data startu.', raw);
+    if (!w.ulica) return ekranFormularza(f, 'Trzeba wpisać ulicę i numer.', raw, krok1);
+    if (Number.isNaN(w.metraz) || (w.metraz != null && w.metraz <= 0)) return ekranFormularza(f, 'Metraż musi być liczbą większą od zera, np. 50 albo 48,5.', raw, krok1);
+    if (Number.isNaN(w.budzet) || (w.budzet != null && w.budzet < 0)) return ekranFormularza(f, 'Budżet musi być liczbą, np. 120000.', raw, krok1);
+    if (w.data_startu && w.termin_konca && w.termin_konca < w.data_startu) return ekranFormularza(f, 'Termin końca nie może być wcześniej niż data startu.', raw, krok1);
     $('#f').classList.add('load');
     const q = n ? sb.from('mieszkania').insert(w).select().single() : sb.from('mieszkania').update(w).eq('id', f.id).select().single();
     const { data, error } = await q;
-    if (error) return ekranFormularza(f, blad(error), raw);
+    if (error) return ekranFormularza(f, blad(error), raw, krok1);
     if (n){ S.flats.push(data); } else { Object.assign(S.flats.find(x => x.id === f.id), data); }
     S.flats.sort((a,b) => a.ulica.localeCompare(b.ulica, 'pl', {numeric:true}));
-    n ? ekranListy('Mieszkanie ' + data.ulica + ' zapisane.') : ekranMieszkania(f.id, 'Zmiany zapisane.');
+    if (k1){ if (!S.kreator || S.kreator.fid !== data.id) S.kreator = { fid:data.id, pom:[], otwarte:null, licz:0 }; return ekranKrok2(data.id, 'Mieszkanie ' + data.ulica + ' zapisane.'); }
+    ekranMieszkania(f.id, 'Zmiany zapisane.');
+  };
+}
+
+/* ---------- Dodaj mieszkanie krokami (kroki 2–4) ---------- */
+const KROKI = ['Dane','Pliki','Pomieszczenia','Prace'];
+const kroki = n => '<div class="kroki">' + KROKI.map((t, i) => `<span class="${i + 1 < n ? 'zrob' : i + 1 === n ? 'teraz' : ''}">${i + 1 < n ? '✓ ' : ''}${i + 1}. ${t}</span>`).join('') + '</div>';
+const RODZAJE = ['Balkon','Korytarz','Kuchnia','Łazienka','Pokój','Salon','WC','Inne'];
+const ETAPY = ['Rozbiórki i przygotowanie','Elektryka','Hydraulika','Ściany i sufity','Łazienka – płytki i biały montaż','Podłogi i drzwi','Kuchnia, lampy i sprzątanie'];
+const MOKRE = ['Kuchnia','Łazienka','WC'], BEZ_BALKONU = ['Korytarz','Kuchnia','Łazienka','Pokój','Salon','WC','Inne'];
+const KATALOG = [
+  [1,'Demontaż starych drzwi',['Kuchnia','Łazienka','Pokój','Salon','WC']],[1,'Skucie płytek',['Balkon','Korytarz','Kuchnia','Łazienka','WC']],
+  [1,'Usunięcie starej armatury',MOKRE],[1,'Usunięcie starej podłogi','*'],[1,'Wywóz gruzu','*'],
+  [2,'Gniazda','*'],[2,'Nowe przewody','*'],[2,'Oświetlenie','*'],[2,'Włączniki','*'],
+  [3,'Grzejnik',['Korytarz','Kuchnia','Łazienka','Pokój','Salon']],[3,'Odpływy',MOKRE],[3,'Podejścia wody',MOKRE],[3,'Wentylacja',MOKRE],
+  [4,'Gładzie',BEZ_BALKONU],[4,'Malowanie ścian','*'],[4,'Malowanie sufitu','*'],[4,'Sufit podwieszany G-K',BEZ_BALKONU],[4,'Zabudowa G-K',BEZ_BALKONU],[4,'Zabudowa stelaża WC',['Łazienka','WC']],
+  [5,'Hydroizolacja',['Balkon','Łazienka','WC']],[5,'Montaż WC podwieszanego',['Łazienka','WC']],[5,'Płytki podłogowe',['Łazienka','WC']],[5,'Płytki ścienne',['Łazienka','WC']],
+  [5,'Prysznic',['Łazienka']],[5,'Umywalka z szafką',['Łazienka','WC']],[5,'Wanna',['Łazienka']],
+  [6,'Drzwi wewnętrzne',['Kuchnia','Łazienka','Pokój','Salon','WC']],[6,'Listwy przypodłogowe',['Korytarz','Kuchnia','Pokój','Salon']],[6,'Panele',['Korytarz','Kuchnia','Pokój','Salon']],
+  [6,'Płytki podłogowe',['Balkon','Korytarz','Kuchnia']],[6,'Próg',['Balkon','Łazienka','WC']],[6,'Wylewka','*'],
+  [7,'Lampy','*'],[7,'Meble kuchenne',['Kuchnia']],[7,'Płytki nad blatem',['Kuchnia']],[7,'Sprzątanie końcowe','*']
+];
+const pl = (n, a, b, c) => n === 1 ? a : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? b : c;
+const ilePrac = n => n + ' ' + pl(n, 'praca', 'prace', 'prac');
+const ileZazn = n => n + ' ' + pl(n, 'praca zaznaczona', 'prace zaznaczone', 'prac zaznaczonych');
+const wPom = n => 'w ' + n + ' ' + (n === 1 ? 'pomieszczeniu' : 'pomieszczeniach');
+const poNazwie = (a, b) => a.nazwa.localeCompare(b.nazwa, 'pl', { numeric:true });
+const zaznaczone = p => p.prace.filter(x => x.zazn).length;
+
+function kreator(fid){ const f = mieszkanie(fid); if (!f || !S.kreator || S.kreator.fid !== fid) { ekranListy(); return null; } return f; }
+
+async function ekranKrok2(fid, msg, info = true){
+  const f = kreator(fid); if (!f) return;
+  S.kreator.krok = 2;
+  app.innerHTML = '<p>Wczytuję pliki…</p>';
+  const { data } = await sb.from('pliki').select('nazwa,folder,utworzono').eq('mieszkanie', fid).in('folder', ['plany','zdjecia_wiz','zdjecia_przed']).order('utworzono', { ascending:false });
+  const pliki = data || [];
+  const SLOTY = [['plany','Plany od architekta','Plany od architekta'],['zdjecia_wiz','Wizualizacje','Zdjęcia › Wizualizacje'],['zdjecia_przed','Zdjęcia przed remontem','Zdjęcia › Przed remontem']];
+  app.innerHTML = `<button class="btnT" id="wroc">← Moje mieszkania</button>
+    <h1>Nowe mieszkanie</h1>${kroki(2)}
+    <p class="intro">Krok 2 z 4. Tu ${esc(kto())} wgrywa pliki mieszkania ${esc(f.ulica)}. Każdy rodzaj trafia od razu do swojego folderu w Bibliotece. Wszystkie pliki są nieobowiązkowe: mieszkanie można dodać bez planów, a pliki dograć później w Bibliotece. Następny krok to pomieszczenia.</p>
+    ${msg ? komunikat(msg, info) : ''}
+    ${SLOTY.map(([k, t, gdzie]) => { const lista = pliki.filter(p => p.folder === k);
+      return `<div class="card" data-slot="${k}"><div class="slot"><span><b>${t}</b><small>Trafia do: Biblioteka › ${gdzie}</small></span>
+        <label class="btn wgraj" for="wybor-${k}" id="wgraj-${k}">+ Wgraj zdjęcia lub pliki PDF</label>
+        <input type="file" id="wybor-${k}" class="hide" multiple accept="image/jpeg,image/png,image/webp,image/*,application/pdf,.pdf"></div>
+        ${lista.length ? '<ul class="pliki-lista">' + lista.map(p => `<li>✓ ${esc(p.nazwa)}</li>`).join('') + '</ul>' : '<small style="display:block;margin-top:6px">Nie ma jeszcze plików.</small>'}</div>`; }).join('')}
+    <div class="acts"><button class="btn2" id="wstecz">← Wstecz</button><button class="btn" id="dalej">Dalej: pomieszczenia</button></div>`;
+  wyjscieZKreatora(fid);
+  $('#wstecz').onclick = () => ekranFormularza(f, null, null, true);
+  $('#dalej').onclick = () => ekranKrok3(fid);
+  SLOTY.forEach(([k]) => { $('#wybor-' + k).onchange = e => wgraj(fid, k, [...e.target.files], (txt, ok) => ekranKrok2(fid, txt, ok), '#wgraj-' + k); });
+}
+
+function wyjscieZKreatora(fid){
+  S.wyjscieZDanych = cel => { if (!S.kreator || !S.kreator.pom.length){ S.wyjscieZDanych = null; return cel(); }
+    const f = mieszkanie(fid);
+    app.innerHTML = `<div class="narrow" style="margin:auto"><h1>Wyjść z dodawania?</h1>
+      <p class="intro">Mieszkanie <b>${esc(f ? f.ulica : '')}</b> jest już zapisane, ale pomieszczenia i prace jeszcze nie. Po kliknięciu „Wyjdź bez zapisu” pomieszczenia i prace przepadną. Po kliknięciu „Wróć do dodawania” otworzy się znowu ostatni krok.</p>
+      <div class="acts"><button class="btn2" id="nie">Wyjdź bez zapisu</button><button class="btn" id="tak">Wróć do dodawania</button></div></div>`;
+    $('#nie').onclick = () => { S.wyjscieZDanych = null; S.kreator = null; cel(); };
+    $('#tak').onclick = () => S.kreator.krok === 4 ? ekranKrok4(fid) : S.kreator.krok === 2 ? ekranKrok2(fid) : ekranKrok3(fid); };
+  $('#wroc').onclick = () => S.wyjscieZDanych(ekranListy);
+}
+
+function nowePomieszczenie(rodzaj){
+  const K = S.kreator; let nazwa = rodzaj, i = 2;
+  while (K.pom.some(p => p.nazwa.trim().toLowerCase() === nazwa.toLowerCase())) nazwa = rodzaj + ' ' + i++;
+  const prace = KATALOG.filter(([, , r]) => r === '*' || (rodzaj !== 'Inne' && r.includes(rodzaj))).map(([etap, n]) => ({ etap, nazwa:n, zazn:false, dop:false }));
+  K.pom.push({ klucz:'p' + (++K.licz), rodzaj, nazwa, metraz:'', prace });
+}
+
+function ekranKrok3(fid, msg){
+  const f = kreator(fid); if (!f) return;
+  const K = S.kreator; K.krok = 3; K.pom.sort(poNazwie);
+  const suma = K.pom.reduce((s, p) => { const n = liczba(p.metraz); return s + (n > 0 ? n : 0); }, 0);
+  app.innerHTML = `<button class="btnT" id="wroc">← Moje mieszkania</button>
+    <h1>Nowe mieszkanie</h1>${kroki(3)}
+    <p class="intro">Krok 3 z 4. Tu ${esc(kto())} wybiera pomieszczenia z listy od A do Z. Każde pomieszczenie może mieć własną nazwę i metraż, a ten sam rodzaj można dodać kilka razy, np. dwa pokoje. Następny krok to prace w każdym pomieszczeniu.</p>
+    ${msg ? komunikat(msg) : ''}
+    <div class="card"><b>Dodaj pomieszczenie</b><div class="chips">${RODZAJE.map(r => `<button data-rodzaj="${r}">+ ${r}</button>`).join('')}</div></div>
+    <div class="card" id="wybrane"><div class="zw"><b>Wybrane pomieszczenia (${K.pom.length})</b><b id="suma">razem ${m2(suma)}</b></div>
+      ${K.pom.length ? K.pom.map(p => `<div class="pom" data-k="${p.klucz}"><div><label for="n-${p.klucz}">Nazwa</label><input id="n-${p.klucz}" data-pole="nazwa" maxlength="60" value="${esc(p.nazwa)}"></div>
+        <div><label for="m-${p.klucz}">m²</label><input id="m-${p.klucz}" data-pole="metraz" inputmode="decimal" value="${esc(p.metraz)}"></div><button class="btn2" data-usun="${p.klucz}">Usuń</button></div>`).join('')
+      : '<p class="empty" style="padding:14px 0 4px">Nie ma jeszcze pomieszczeń. Po kliknięciu rodzaju pomieszczenia powyżej pojawi się ono tutaj. Można też przejść dalej bez pomieszczeń.</p>'}</div>
+    <div class="acts"><button class="btn2" id="wstecz">← Wstecz</button><button class="btn" id="dalej">Dalej: prace</button></div>`;
+  wyjscieZKreatora(fid);
+  const czytaj = () => app.querySelectorAll('.pom').forEach(r => { const p = K.pom.find(x => x.klucz === r.dataset.k); p.nazwa = r.querySelector('[data-pole=nazwa]').value; p.metraz = r.querySelector('[data-pole=metraz]').value; });
+  app.querySelectorAll('[data-rodzaj]').forEach(b => b.onclick = () => { czytaj(); nowePomieszczenie(b.dataset.rodzaj); ekranKrok3(fid); });
+  app.querySelectorAll('[data-usun]').forEach(b => b.onclick = () => { czytaj(); K.pom = K.pom.filter(p => p.klucz !== b.dataset.usun); ekranKrok3(fid); });
+  app.querySelectorAll('[data-pole=metraz]').forEach(i => i.oninput = () => { czytaj(); $('#suma').textContent = 'razem ' + m2(K.pom.reduce((s, p) => { const n = liczba(p.metraz); return s + (n > 0 ? n : 0); }, 0)); });
+  $('#wstecz').onclick = () => { czytaj(); ekranKrok2(fid); };
+  $('#dalej').onclick = () => {
+    czytaj();
+    for (const p of K.pom){
+      if (!p.nazwa.trim()) return ekranKrok3(fid, 'Każde pomieszczenie musi mieć nazwę.');
+      const n = liczba(p.metraz);
+      if (Number.isNaN(n) || (n != null && n <= 0)) return ekranKrok3(fid, `Metraż pomieszczenia ${p.nazwa.trim()} musi być liczbą większą od zera, np. 12 albo 4,5.`);
+    }
+    K.pom.forEach(p => p.nazwa = p.nazwa.trim());
+    if (!K.otwarte && K.pom.length) K.otwarte = [...K.pom].sort(poNazwie)[0].klucz;
+    ekranKrok4(fid);
+  };
+}
+
+function ekranKrok4(fid, msg){
+  const f = kreator(fid); if (!f) return;
+  const K = S.kreator; K.krok = 4; K.pom.sort(poNazwie);
+  const razem = K.pom.reduce((s, p) => s + zaznaczone(p), 0);
+  const karta = p => { const otw = K.otwarte === p.klucz;
+    return `<div class="card" data-k="${p.klucz}"><button class="zw" data-otworz="${p.klucz}"><b>${esc(p.nazwa)}</b><span class="licznik">${ileZazn(zaznaczone(p))} ${otw ? '⌄' : '›'}</span></button>
+    ${otw ? ETAPY.map((e, i) => { const w = p.prace.map((x, j) => ({ ...x, j })).filter(x => x.etap === i + 1).sort(poNazwie);
+      return `<div class="etap">${i + 1}. ${e}</div>` + (w.length ? w.map(x => `<div class="kr"><input type="checkbox" id="c-${p.klucz}-${x.j}" data-j="${x.j}" ${x.zazn ? 'checked' : ''}><label for="c-${p.klucz}-${x.j}">${esc(x.nazwa)}${x.dop ? ' <small>(dopisana)</small>' : ''}</label>${x.dop ? `<button class="btn2" data-usunp="${x.j}">Usuń</button>` : ''}</div>`).join('')
+        : '<div class="kr"><small>W tym etapie nie ma prac dla tego pomieszczenia. Można dopisać własną.</small></div>'); }).join('') + `
+      <div class="dop"><div><label for="dn-${p.klucz}">Dopisz pracę</label><input id="dn-${p.klucz}" maxlength="120" placeholder="np. Uchwyt na ręczniki"></div>
+      <div><label for="de-${p.klucz}">Etap</label><select id="de-${p.klucz}">${ETAPY.map((e, i) => `<option value="${i + 1}">${i + 1}. ${e}</option>`).join('')}</select></div>
+      <button class="btn2" data-dopisz="${p.klucz}">+ Dopisz pracę</button></div>` : ''}</div>`; };
+  app.innerHTML = `<button class="btnT" id="wroc">← Moje mieszkania</button>
+    <h1>Nowe mieszkanie</h1>${kroki(4)}
+    <p class="intro">Krok 4 z 4. Tu ${esc(kto())} zaznacza kratkami prace w każdym pomieszczeniu, ułożone w 7 etapach remontu. Może dopisać własną pracę albo usunąć dopisaną. Po kliknięciu „Zatwierdź listę prac” lista zapisze się w bazie i otworzy się ekran mieszkania.</p>
+    ${msg ? komunikat(msg) : ''}
+    <div class="card dark"><b id="razem">${ilePrac(razem)} ${wPom(K.pom.length)}</b></div>
+    ${K.pom.length ? K.pom.map(karta).join('') : `<div class="card empty">Nie ma pomieszczeń, więc lista prac będzie pusta. Pomieszczenia dodaje się w kroku 3 (przycisk „← Wstecz”).</div>`}
+    <div class="acts"><button class="btn2" id="wstecz">← Wstecz</button><button class="btn" id="zatwierdz">Zatwierdź listę prac</button></div>`;
+  wyjscieZKreatora(fid);
+  app.querySelectorAll('[data-otworz]').forEach(b => b.onclick = () => { K.otwarte = K.otwarte === b.dataset.otworz ? null : b.dataset.otworz; ekranKrok4(fid); });
+  app.querySelectorAll('.kr input[type=checkbox]').forEach(c => c.onchange = () => {
+    const p = K.pom.find(x => x.klucz === c.closest('.card').dataset.k); p.prace[+c.dataset.j].zazn = c.checked;
+    c.closest('.card').querySelector('.licznik').textContent = ileZazn(zaznaczone(p)) + ' ⌄';
+    $('#razem').textContent = ilePrac(K.pom.reduce((s, q) => s + zaznaczone(q), 0)) + ' ' + wPom(K.pom.length);
+  });
+  app.querySelectorAll('[data-usunp]').forEach(b => b.onclick = () => { const p = K.pom.find(x => x.klucz === b.closest('.card').dataset.k); p.prace.splice(+b.dataset.usunp, 1); ekranKrok4(fid); });
+  app.querySelectorAll('[data-dopisz]').forEach(b => b.onclick = () => {
+    const p = K.pom.find(x => x.klucz === b.dataset.dopisz); const nazwa = $('#dn-' + p.klucz).value.trim(), etap = +$('#de-' + p.klucz).value;
+    if (!nazwa) return ekranKrok4(fid, 'Trzeba wpisać, jaką pracę dopisać.');
+    if (p.prace.some(x => x.etap === etap && x.nazwa.toLowerCase() === nazwa.toLowerCase())) return ekranKrok4(fid, `Praca „${nazwa}” jest już w tym etapie pomieszczenia ${p.nazwa}.`);
+    p.prace.push({ etap, nazwa, zazn:true, dop:true }); ekranKrok4(fid);
+  });
+  $('#wstecz').onclick = () => ekranKrok3(fid);
+  $('#zatwierdz').onclick = async () => {
+    $('#zatwierdz').disabled = true;
+    const pom = K.pom.map(p => ({ id:crypto.randomUUID(), mieszkanie:fid, rodzaj:p.rodzaj, nazwa:p.nazwa, metraz:liczba(p.metraz) }));
+    const prace = []; K.pom.forEach((p, i) => p.prace.filter(x => x.zazn).forEach(x => prace.push({ mieszkanie:fid, pomieszczenie:pom[i].id, etap:x.etap, nazwa:x.nazwa, dopisana:x.dop })));
+    if (pom.length){
+      const r1 = await sb.from('pomieszczenia').insert(pom);
+      if (r1.error) return ekranKrok4(fid, /pomieszczenia|Could not find the table/i.test(r1.error.message || '') && /schema|relation|find/i.test(r1.error.message || '') ? 'Pomieszczenia nie są jeszcze włączone w bazie danych. Trzeba wgrać plik 04_pomieszczenia_prace.sql w Supabase.' : blad(r1.error));
+      if (prace.length){
+        const r2 = await sb.from('prace').insert(prace);
+        if (r2.error){ await sb.from('pomieszczenia').delete().in('id', pom.map(p => p.id)); return ekranKrok4(fid, 'Nie udało się zapisać listy prac. ' + blad(r2.error)); }
+      }
+    }
+    S.kreator = null; S.wyjscieZDanych = null;
+    ekranMieszkania(fid, pom.length ? `Lista prac zapisana: ${ilePrac(prace.length)} ${wPom(pom.length)}.` : `Mieszkanie ${f.ulica} dodane bez pomieszczeń i prac.`);
   };
 }
 
@@ -395,9 +575,10 @@ const FOLDERY = [
   { k:'plany', n:'Plany od architekta', o:'plany mieszkania od architekta. Teraz widzi je {KTO}, później zobaczy je też firma remontowa' },
   { k:'postepy', n:'Postępy prac', o:'zdjęcia postępów remontu' },
   { k:'poprawki', n:'Poprawki', o:'zdjęcia usterek do poprawienia' },
-  { k:'zdjecia', n:'Zdjęcia', o:'zdjęcia mieszkania przed remontem i po remoncie', pod:[
+  { k:'zdjecia', n:'Zdjęcia', o:'zdjęcia mieszkania przed remontem, po remoncie i wizualizacje', pod:[
     { k:'zdjecia_po', n:'Po remoncie', o:'zdjęcia mieszkania po remoncie' },
-    { k:'zdjecia_przed', n:'Przed remontem', o:'zdjęcia mieszkania przed remontem' } ] }
+    { k:'zdjecia_przed', n:'Przed remontem', o:'zdjęcia mieszkania przed remontem' },
+    { k:'zdjecia_wiz', n:'Wizualizacje', o:'wizualizacje, czyli jak mieszkanie ma wyglądać po remoncie' } ] }
 ];
 const alfabet = (a, b) => (a.ostatni ? 1 : 0) - (b.ostatni ? 1 : 0) || a.n.localeCompare(b.n, 'pl');
 FOLDERY.sort(alfabet); FOLDERY.forEach(g => g.pod && g.pod.sort(alfabet));
@@ -503,10 +684,10 @@ async function zmniejsz(file){
   return (file.type === 'image/jpeg' && file.size <= blob.size) ? file : blob;
 }
 
-async function wgraj(fid, lk, files){
+async function wgraj(fid, lk, files, powrot, etykieta = '#wgraj'){
   if (!files.length) return;
   const uid = S.user.id; const bledy = []; let ok = 0;
-  const pasekW = (i) => { const w = $('#wgraj'); if (w){ w.textContent = `Wgrywam ${i} z ${files.length}…`; w.classList.add('load'); } };
+  const pasekW = (i) => { const w = $(etykieta); if (w){ w.textContent = `Wgrywam ${i} z ${files.length}…`; w.classList.add('load'); } };
   for (let i = 0; i < files.length; i++){
     pasekW(i + 1);
     const file = files[i];
@@ -528,7 +709,7 @@ async function wgraj(fid, lk, files){
     ok++;
   }
   const txt = (ok ? `Wgrano: ${ileP(ok)}.` : '') + (bledy.length ? (ok ? ' ' : '') + 'Nie wgrano: ' + bledy.join(' ') : '');
-  ekranFolderu(fid, lk, txt, !bledy.length);
+  powrot ? powrot(txt, !bledy.length) : ekranFolderu(fid, lk, txt, !bledy.length);
 }
 
 function podglad(p, linki){
