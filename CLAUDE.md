@@ -35,7 +35,7 @@ Zasady ustaliła Pati (Właścicielka projektu).
 ## Wygląd i teksty w aplikacji
 
 18. Kolory zawsze: tło kremowe #f4f1ea, czerń #1E1A17, złoto #B8924A. Nigdy białe tło. Złoto tylko na napisach, liniach i ramkach. Ostrzeżenia na czerwono #FF0000.
-19. Mówimy „Właściciel aplikacji”, nigdy „Ty”, także przy czasownikach. Piszemy „aplikacja”, nie „program”.
+19. W tekstach aplikacji używamy imienia z ‚Moje dane’; gdy go brak, piszemy ‚Właściciel aplikacji’. Nigdy forma ‚Ty’. Piszemy „aplikacja”, nie „program”.
 20. Każdy ekran mówi wprost, co robi i co będzie dalej.
 21. Listy są od A do Z, a „Inne” zawsze na końcu. Liczby od najmniejszej do największej.
 22. Aplikacja działa na telefonie, tablecie i komputerze, bez błędów i zawieszeń.
