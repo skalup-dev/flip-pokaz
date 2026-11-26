@@ -43,6 +43,11 @@ h1{font-size:22px;margin:0 0 6px}h2{font-size:18px;margin:16px 0 8px}
 .hide{display:none!important}
 .empty{text-align:center;padding:28px 14px}
 .load{opacity:.6;pointer-events:none}
+.logo{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .btn2{flex:none;white-space:nowrap}
+.stopka{text-align:center;font-size:13px;padding:18px 16px 24px}
+.stopka b{color:var(--z)}
+@media (max-width:480px){.top .who{display:none}.top{gap:8px;padding:10px 12px}.logo{font-size:16px}.top .btn2{padding:6px 8px}}
 @media (max-width:640px){.g3{grid-template-columns:1fr 1fr}.g3 .kpi:last-child{grid-column:1/-1}.g2{grid-template-columns:1fr}}
 /* ---------- Biblioteka ---------- */
 .btnBib{font-size:17px;padding:14px;margin-bottom:12px}
@@ -82,9 +87,11 @@ h1{font-size:22px;margin:0 0 6px}h2{font-size:18px;margin:16px 0 8px}
 <div class="top">
   <span class="logo" id="logo">FLIP</span><span class="sp"></span>
   <span class="who hide" id="who"></span>
+  <button class="btn2 hide" id="mojeDane">Moje dane</button>
   <button class="btn2 hide" id="wyloguj">Wyloguj</button>
 </div>
 <div class="wrap" id="app"></div>
+<div class="stopka">Aplikacja <b>Flip</b></div>
 
 <script src="config.js"></script>
 <script src="supabase.js"></script>
@@ -100,15 +107,16 @@ const liczba = v => { v = String(v).trim().replace(/\s/g,'').replace(',','.'); i
 
 const BLEDY = {
   'Invalid login credentials':'Zły e-mail albo hasło.',
-  'Email not confirmed':'Konto nie jest jeszcze potwierdzone. Kliknij link w mailu, który przyszedł po rejestracji.',
-  'User already registered':'Konto z tym e-mailem już istnieje. Zaloguj się albo użyj „Nie pamiętam hasła”.',
+  'Email not confirmed':'Konto nie jest jeszcze potwierdzone. Trzeba kliknąć link w mailu, który przyszedł po rejestracji.',
+  'User already registered':'Konto z tym e-mailem już istnieje. Można się zalogować albo użyć „Nie pamiętam hasła”.',
   'Password should be at least 6 characters':'Hasło musi mieć co najmniej 8 znaków.',
-  'Failed to fetch':'Brak połączenia z internetem. Spróbuj ponownie.',
+  'Failed to fetch':'Brak połączenia z internetem. Trzeba spróbować ponownie.',
   'Unable to validate email address: invalid format':'Ten e-mail ma zły format.'
 };
-const blad = e => { const m = (e && (e.message || e.error_description)) || String(e); for (const k in BLEDY) if (m.includes(k)) return BLEDY[k]; if (/rate limit/i.test(m)) return 'Za dużo prób. Odczekaj chwilę i spróbuj ponownie.'; return 'Coś poszło nie tak: ' + m; };
+const blad = e => { const m = (e && (e.message || e.error_description)) || String(e); for (const k in BLEDY) if (m.includes(k)) return BLEDY[k]; if (/rate limit/i.test(m)) return 'Za dużo prób. Trzeba odczekać chwilę i spróbować ponownie.'; return 'Coś poszło nie tak: ' + m; };
 
-const S = { user:null, flats:[], tryb:'logowanie' };
+const S = { user:null, flats:[], tryb:'logowanie', profil:null };
+const kto = () => (S.profil && S.profil.imie && S.profil.imie.trim()) || 'Właściciel aplikacji';
 let sb = null;
 
 function komunikat(txt, info){ return `<div class="msg ${info?'info':''}" role="alert">${esc(txt)}</div>`; }
@@ -132,21 +140,26 @@ function start(){
 }
 
 function pasek(){
+  const firma = S.user && S.profil && S.profil.nazwa_firmy && S.profil.nazwa_firmy.trim();
+  $('#logo').textContent = firma || 'FLIP';
+  $('#logo').title = firma || '';
+  $('#mojeDane').classList.toggle('hide', !S.user || !!S.recovery);
   $('#who').textContent = S.user ? S.user.email : '';
   $('#who').classList.toggle('hide', !S.user);
   $('#wyloguj').classList.toggle('hide', !S.user);
 }
-$('#wyloguj').onclick = async () => { await sb.auth.signOut(); S.flats = []; };
+$('#wyloguj').onclick = async () => { await sb.auth.signOut(); S.flats = []; S.profil = null; pasek(); };
+$('#mojeDane').onclick = () => ekranMojeDane();
 $('#logo').onclick = () => S.user ? ekranListy() : ekranLogowania();
 
 /* ---------- logowanie ---------- */
 function ekranLogowania(msg, info){
   const t = S.tryb;
-  const tytul = {logowanie:'Logowanie', rejestracja:'Załóż konto', reset:'Nie pamiętam hasła'}[t];
+  const tytul = {logowanie:'Logowanie', rejestracja:'Zakładanie konta', reset:'Nie pamiętam hasła'}[t];
   const opis = {
-    logowanie:'Zaloguj się, żeby zobaczyć swoje mieszkania. Po zalogowaniu otworzy się lista mieszkań.',
-    rejestracja:'Załóż konto Właściciela aplikacji. Po założeniu przyjdzie mail z linkiem do potwierdzenia, a potem możesz się zalogować.',
-    reset:'Wpisz e-mail konta. Przyjdzie mail z linkiem, po kliknięciu ustawisz nowe hasło.'
+    logowanie:'Logowanie do aplikacji Flip. Po zalogowaniu otworzy się lista mieszkań.',
+    rejestracja:'Tu zakłada się konto Właściciela aplikacji. Po założeniu przyjdzie mail z linkiem do potwierdzenia, a potem będzie można się zalogować.',
+    reset:'Trzeba wpisać e-mail konta. Przyjdzie mail z linkiem, a po jego kliknięciu będzie można ustawić nowe hasło.'
   }[t];
   app.innerHTML = `<div class="narrow" style="margin:auto">
     <h1>${tytul}</h1><p class="intro">${opis}</p>
@@ -156,7 +169,7 @@ function ekranLogowania(msg, info){
       <label for="email">E-mail</label><input id="email" type="email" autocomplete="email" required>
       ${t!=='reset' ? `<label for="haslo">Hasło ${t==='rejestracja'?'<small>(co najmniej 8 znaków)</small>':''}</label>
         <input id="haslo" type="password" autocomplete="${t==='rejestracja'?'new-password':'current-password'}" required>` : ''}
-      ${t==='rejestracja' ? `<label for="haslo2">Powtórz hasło</label><input id="haslo2" type="password" autocomplete="new-password">` : ''}
+      ${t==='rejestracja' ? `<label for="haslo2">Hasło jeszcze raz</label><input id="haslo2" type="password" autocomplete="new-password">` : ''}
       <button class="btn full" style="margin-top:16px" id="wyslij">${{logowanie:'Zaloguj',rejestracja:'Załóż konto',reset:'Wyślij link'}[t]}</button>
     </form>
     <div style="margin-top:12px">
@@ -168,12 +181,12 @@ function ekranLogowania(msg, info){
   $('#f').onsubmit = async e => {
     e.preventDefault();
     const email = $('#email').value.trim();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return ekranLogowaniaZ('Wpisz poprawny e-mail.');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return ekranLogowaniaZ('Trzeba wpisać poprawny e-mail.');
     const f = $('#f'); f.classList.add('load');
     try{
       if (t === 'logowanie'){
         const haslo = $('#haslo').value;
-        if (!haslo) { f.classList.remove('load'); return ekranLogowaniaZ('Wpisz hasło.', email); }
+        if (!haslo) { f.classList.remove('load'); return ekranLogowaniaZ('Trzeba wpisać hasło.', email); }
         const { error } = await sb.auth.signInWithPassword({ email, password: haslo });
         if (error) throw error;
       } else if (t === 'rejestracja'){
@@ -182,7 +195,7 @@ function ekranLogowania(msg, info){
         if (haslo !== h2) { f.classList.remove('load'); return ekranLogowaniaZ('Hasła nie są takie same.', email, imie); }
         const { data, error } = await sb.auth.signUp({ email, password: haslo, options:{ data:{ imie }, emailRedirectTo: location.origin + location.pathname } });
         if (error) throw error;
-        if (!data.session){ S.tryb = 'logowanie'; ekranLogowania('Konto założone. Sprawdź skrzynkę ' + email + ' i kliknij link w mailu, potem zaloguj się tutaj.', true); }
+        if (!data.session){ S.tryb = 'logowanie'; ekranLogowania('Konto założone. Na skrzynkę ' + email + ' przyszedł mail z linkiem. Po kliknięciu linku można się tutaj zalogować.', true); }
       } else {
         const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
         if (error) throw error;
@@ -194,10 +207,10 @@ function ekranLogowania(msg, info){
 function ekranLogowaniaZ(msg, email, imie){ ekranLogowania(msg); if (email) $('#email').value = email; if (imie && $('#imie')) $('#imie').value = imie; }
 
 function ekranNoweHaslo(msg){
-  app.innerHTML = `<div class="narrow" style="margin:auto"><h1>Ustaw nowe hasło</h1>
-    <p class="intro">Wpisz nowe hasło. Po zapisaniu otworzy się lista mieszkań.</p>${msg?komunikat(msg):''}
+  app.innerHTML = `<div class="narrow" style="margin:auto"><h1>Ustawianie nowego hasła</h1>
+    <p class="intro">Tu ustawia się nowe hasło do konta. Po zapisaniu otworzy się lista mieszkań.</p>${msg?komunikat(msg):''}
     <form id="f"><label for="haslo">Nowe hasło <small>(co najmniej 8 znaków)</small></label><input id="haslo" type="password" autocomplete="new-password">
-    <label for="haslo2">Powtórz hasło</label><input id="haslo2" type="password" autocomplete="new-password">
+    <label for="haslo2">Hasło jeszcze raz</label><input id="haslo2" type="password" autocomplete="new-password">
     <button class="btn full" style="margin-top:16px">Zapisz nowe hasło</button></form></div>`;
   $('#f').onsubmit = async e => {
     e.preventDefault();
@@ -213,7 +226,8 @@ function ekranNoweHaslo(msg){
 /* ---------- mieszkania ---------- */
 async function wczytaj(msg){
   app.innerHTML = '<p>Wczytuję mieszkania…</p>';
-  const { data, error } = await sb.from('mieszkania').select('*');
+  const [{ data, error }, pr] = await Promise.all([ sb.from('mieszkania').select('*'), sb.from('profile').select('*').eq('id', S.user.id) ]);
+  S.profil = (pr && pr.data && pr.data[0]) || null; pasek();
   if (error){ app.innerHTML = komunikat(blad(error)) + '<button class="btn" id="ponow">Spróbuj ponownie</button>'; $('#ponow').onclick = () => wczytaj(); return; }
   S.flats = (data || []).sort((a,b) => a.ulica.localeCompare(b.ulica, 'pl', {numeric:true}));
   ekranListy(msg);
@@ -227,7 +241,7 @@ function ekranListy(msg){
   const budzet = fl.reduce((s,f) => s + (Number(f.budzet) || 0), 0);
   const late = fl.filter(spozn).length;
   app.innerHTML = `<h1>Moje mieszkania</h1>
-    <p class="intro">Tu są wszystkie mieszkania Właściciela aplikacji, zapisane na stałe. Kliknij mieszkanie, żeby zobaczyć szczegóły, albo dodaj nowe.</p>
+    <p class="intro">${esc(kto())} ma tu wszystkie swoje mieszkania, zapisane na stałe. ${esc(kto())} klika mieszkanie, żeby zobaczyć szczegóły, albo dodaje nowe.</p>
     ${msg ? komunikat(msg, true) : ''}
     <div class="grid g3" style="margin-bottom:12px">
       <div class="card dark kpi"><small>Mieszkania</small><div id="kpiN">${fl.length}</div></div>
@@ -240,7 +254,7 @@ function ekranListy(msg){
         <b>${esc(f.ulica)}</b>${f.miasto ? `, ${esc(f.miasto)}` : ''}
         <div class="meta"><span>Metraż: ${m2(f.metraz)}</span><span>Budżet: ${zl(f.budzet)}</span>
         <span class="${spozn(f)?'late':''}">Termin końca: ${dt(f.termin_konca)}${spozn(f)?' – po terminie':''}</span></div>
-      </button>`).join('') : `<div class="card empty"><b>Nie ma jeszcze żadnego mieszkania.</b><br>Kliknij „Dodaj mieszkanie”, żeby dodać pierwsze.</div>`}</div>`;
+      </button>`).join('') : `<div class="card empty"><b>Nie ma jeszcze żadnego mieszkania.</b><br>Po kliknięciu „Dodaj mieszkanie” można dodać pierwsze.</div>`}</div>`;
   $('#dodaj').onclick = () => ekranFormularza();
   app.querySelectorAll('.flat').forEach(b => b.onclick = () => ekranMieszkania(b.dataset.id));
 }
@@ -248,19 +262,20 @@ function ekranListy(msg){
 function ekranMieszkania(id, msg){
   const f = S.flats.find(x => x.id === id); if (!f) return ekranListy();
   app.innerHTML = `<button class="btnT" id="wroc">← Moje mieszkania</button>
-    <h1>${esc(f.ulica)}</h1><p class="intro">Dane mieszkania. Kliknij „Biblioteka”, żeby wgrać albo obejrzeć zdjęcia i pliki PDF tego mieszkania. Możesz też zmienić dane albo usunąć mieszkanie.</p>
+    <h1>${esc(f.ulica)}</h1><p class="intro">Dane mieszkania. Po kliknięciu „Biblioteka” ${esc(kto())} wgrywa albo ogląda zdjęcia i pliki PDF tego mieszkania. ${esc(kto())} może też zmienić dane albo usunąć mieszkanie.</p>
     ${msg ? komunikat(msg, true) : ''}
     <button class="btn full btnBib" id="biblioteka">Biblioteka – zdjęcia i pliki PDF</button>
     <div class="card">
       <div class="row"><span>Ulica i numer</span><b>${esc(f.ulica)}</b></div>
       <div class="row"><span>Miasto</span><b>${esc(f.miasto) || '–'}</b></div>
+      <div class="row"><span>Firma remontowa</span><b>${esc(f.firma_remontowa) || '–'}</b></div>
       <div class="row"><span>Metraż</span><b>${m2(f.metraz)}</b></div>
       <div class="row"><span>Budżet remontu</span><b>${zl(f.budzet)}</b></div>
       <div class="row"><span>Data startu remontu</span><b>${dt(f.data_startu)}</b></div>
       <div class="row"><span>Termin końca</span><b class="${spozn(f)?'late':''}">${dt(f.termin_konca)}</b></div>
       ${f.opis ? `<div class="row"><span>Opis</span><b style="white-space:pre-wrap;text-align:right">${esc(f.opis)}</b></div>` : ''}
     </div>
-    <div class="card"><b>Co będzie dalej</b><br>W kolejnych krokach dojdą tu: Lista prac, Terminy, Płatności i Chat z firmą.</div>
+    <div class="card"><b>Co będzie dalej</b><br>W kolejnych krokach dojdą tu: ${f.firma_remontowa && f.firma_remontowa.trim() ? 'Chat z firmą ' + esc(f.firma_remontowa.trim()) : 'Chat z firmą remontową'}, Lista prac, Płatności i Terminy.</div>
     <div class="acts"><button class="btn" id="zmien">Zmień dane</button><button class="btn2" id="usun">Usuń mieszkanie</button></div>`;
   $('#wroc').onclick = () => ekranListy();
   $('#biblioteka').onclick = () => ekranBiblioteki(f.id);
@@ -288,12 +303,13 @@ function ekranFormularza(f, msg, wpis){
   const n = !f; const v = wpis || f || {};
   const pole = (id, txt, typ='text', extra='') => `<label for="${id}">${txt}</label><input id="${id}" type="${typ}" value="${esc(v[id] ?? '')}" ${extra}>`;
   app.innerHTML = `<button class="btnT" id="wroc">← ${n ? 'Moje mieszkania' : 'Wróć do mieszkania'}</button>
-    <div class="narrow"><h1>${n ? 'Dodaj mieszkanie' : 'Zmień dane mieszkania'}</h1>
-    <p class="intro">${n ? 'Wpisz dane nowego mieszkania. Po zapisaniu pojawi się na liście mieszkań.' : 'Popraw dane. Po zapisaniu wrócisz do mieszkania.'} Wymagana jest tylko ulica i numer, resztę można dopisać później.</p>
+    <div class="narrow"><h1>${n ? 'Nowe mieszkanie' : 'Zmiana danych mieszkania'}</h1>
+    <p class="intro">${n ? 'Tu wpisuje się dane nowego mieszkania. Po zapisaniu pojawi się ono na liście mieszkań.' : 'Tu poprawia się dane mieszkania. Po zapisaniu otworzy się znowu ekran mieszkania.'} Wymagana jest tylko ulica i numer, resztę można dopisać później.</p>
     ${msg ? komunikat(msg) : ''}
     <form id="f" novalidate>
       ${pole('ulica','Ulica i numer *','text','placeholder="np. Krasińskiego 3/4"')}
       ${pole('miasto','Miasto')}
+      ${pole('firma_remontowa','Firma remontowa <small>(nieobowiązkowo)</small>','text','maxlength="80"')}
       <div class="grid g2">${pole('metraz','Metraż (m²)','text','inputmode="decimal"')}${pole('budzet','Budżet remontu (zł)','text','inputmode="decimal"')}</div>
       <div class="grid g2">${pole('data_startu','Data startu remontu','date')}${pole('termin_konca','Termin końca','date')}</div>
       <label for="opis">Opis <small>(nieobowiązkowy)</small></label><textarea id="opis" rows="3">${esc(v.opis ?? '')}</textarea>
@@ -303,11 +319,12 @@ function ekranFormularza(f, msg, wpis){
   $('#f').onsubmit = async e => {
     e.preventDefault();
     const w = { ulica:$('#ulica').value.trim(), miasto:$('#miasto').value.trim() || null,
+      firma_remontowa:$('#firma_remontowa').value.trim() || null,
       metraz:liczba($('#metraz').value), budzet:liczba($('#budzet').value),
       data_startu:$('#data_startu').value || null, termin_konca:$('#termin_konca').value || null,
       opis:$('#opis').value.trim() || null };
     const raw = { ...w, metraz:$('#metraz').value, budzet:$('#budzet').value };
-    if (!w.ulica) return ekranFormularza(f, 'Wpisz ulicę i numer.', raw);
+    if (!w.ulica) return ekranFormularza(f, 'Trzeba wpisać ulicę i numer.', raw);
     if (Number.isNaN(w.metraz) || (w.metraz != null && w.metraz <= 0)) return ekranFormularza(f, 'Metraż musi być liczbą większą od zera, np. 50 albo 48,5.', raw);
     if (Number.isNaN(w.budzet) || (w.budzet != null && w.budzet < 0)) return ekranFormularza(f, 'Budżet musi być liczbą, np. 120000.', raw);
     if (w.data_startu && w.termin_konca && w.termin_konca < w.data_startu) return ekranFormularza(f, 'Termin końca nie może być wcześniej niż data startu.', raw);
@@ -318,6 +335,34 @@ function ekranFormularza(f, msg, wpis){
     if (n){ S.flats.push(data); } else { Object.assign(S.flats.find(x => x.id === f.id), data); }
     S.flats.sort((a,b) => a.ulica.localeCompare(b.ulica, 'pl', {numeric:true}));
     n ? ekranListy('Mieszkanie ' + data.ulica + ' zapisane.') : ekranMieszkania(f.id, 'Zmiany zapisane.');
+  };
+}
+
+/* ---------- Moje dane ---------- */
+function ekranMojeDane(msg, wpis){
+  if (!S.user) return ekranLogowania();
+  const v = wpis || S.profil || {};
+  app.innerHTML = `<button class="btnT" id="wroc">← Moje mieszkania</button>
+    <div class="narrow"><h1>Moje dane</h1>
+    <p class="intro">Tu ${esc(kto())} wpisuje swoje imię i nazwę firmy. Imię pojawia się w tekstach aplikacji, a nazwa firmy na górnym pasku zamiast „FLIP”. Oba pola są nieobowiązkowe. Po zapisaniu otworzy się lista mieszkań.</p>
+    ${msg ? komunikat(msg) : ''}
+    <form id="f" novalidate>
+      <label for="imie">Imię <small>(nieobowiązkowo)</small></label><input id="imie" maxlength="40" autocomplete="given-name" value="${esc(v.imie ?? '')}">
+      <label for="nazwa_firmy">Nazwa firmy <small>(nieobowiązkowo)</small></label><input id="nazwa_firmy" maxlength="80" autocomplete="organization" value="${esc(v.nazwa_firmy ?? '')}">
+      <button class="btn full" style="margin-top:16px" id="zapiszDane">Zapisz dane</button>
+    </form></div>`;
+  $('#wroc').onclick = () => ekranListy();
+  $('#f').onsubmit = async e => {
+    e.preventDefault();
+    const w = { imie:$('#imie').value.trim() || null, nazwa_firmy:$('#nazwa_firmy').value.trim() || null };
+    if (w.imie && w.imie.length > 40) return ekranMojeDane('Imię może mieć najwyżej 40 znaków.', w);
+    if (w.nazwa_firmy && w.nazwa_firmy.length > 80) return ekranMojeDane('Nazwa firmy może mieć najwyżej 80 znaków.', w);
+    $('#f').classList.add('load');
+    const { data, error } = await sb.from('profile').update(w).eq('id', S.user.id).select();
+    if (error) return ekranMojeDane(/nazwa_firmy|column/i.test(error.message || '') ? 'Moje dane nie są jeszcze włączone w bazie danych. Trzeba wgrać plik 03_moje_dane.sql w Supabase.' : blad(error), w);
+    if (!data || !data.length) return ekranMojeDane('Nie udało się zapisać danych, bo w bazie brakuje profilu tego konta. Trzeba wgrać plik 03_moje_dane.sql w Supabase.', w);
+    S.profil = data[0]; pasek();
+    ekranListy('Dane zapisane.');
   };
 }
 
@@ -332,7 +377,7 @@ const FOLDERY = [
     { k:'faktury_posrednicy', n:'Pośrednicy', o:'faktury od pośredników' },
     { k:'faktury_inne', n:'Inne', o:'pozostałe faktury, które nie pasują do innych folderów', ostatni:true } ] },
   { k:'paragony', n:'Paragony', o:'paragony ze sklepów' },
-  { k:'plany', n:'Plany od architekta', o:'plany mieszkania od architekta. Teraz widzi je Właściciel aplikacji, później zobaczy je też firma remontowa' },
+  { k:'plany', n:'Plany od architekta', o:'plany mieszkania od architekta. Teraz widzi je {KTO}, później zobaczy je też firma remontowa' },
   { k:'postepy', n:'Postępy prac', o:'zdjęcia postępów remontu' },
   { k:'poprawki', n:'Poprawki', o:'zdjęcia usterek do poprawienia' },
   { k:'zdjecia', n:'Zdjęcia', o:'zdjęcia mieszkania przed remontem i po remoncie', pod:[
@@ -368,7 +413,7 @@ async function ekranBiblioteki(fid, msg){
   const ile = {}; (data || []).forEach(p => ile[p.folder] = (ile[p.folder] || 0) + 1);
   app.innerHTML = `<button class="btnT" id="wroc">← Wróć do mieszkania</button>
     <h1>Biblioteka – ${esc(f.ulica)}</h1>
-    <p class="intro">Tu są wszystkie zdjęcia i pliki PDF tego mieszkania, ułożone w folderach od A do Z. Kliknij folder, żeby go otworzyć. W folderze Właściciel aplikacji wgrywa zdjęcia i pliki PDF, ogląda je i usuwa.</p>
+    <p class="intro">Tu są wszystkie zdjęcia i pliki PDF tego mieszkania, ułożone w folderach od A do Z. Po kliknięciu folder się otwiera. W folderze ${esc(kto())} wgrywa zdjęcia i pliki PDF, ogląda je i usuwa.</p>
     ${error ? komunikat(bladPliku(error)) : ''}${msg ? komunikat(msg, true) : ''}
     <div id="foldery">${FOLDERY.map(g => {
       const n = kluczeGrupy(g).reduce((s, k) => s + (ile[k] || 0), 0);
@@ -393,7 +438,7 @@ async function ekranPodfolderow(fid, gk, ile){
   app.innerHTML = `<button class="btnT" id="wrocBib">← Biblioteka</button>
     <p class="sciezka">${esc(f.ulica)} › Biblioteka</p>
     <h1>${esc(g.n)}</h1>
-    <p class="intro">W tym folderze są ${esc(g.o)}, podzielone na podfoldery. Kliknij podfolder, żeby wgrać albo obejrzeć jego zdjęcia i pliki PDF.</p>
+    <p class="intro">W tym folderze są ${esc(g.o)}, podzielone na podfoldery. Po kliknięciu podfolderu można wgrać albo obejrzeć jego zdjęcia i pliki PDF.</p>
     <div id="foldery">${g.pod.map(l => `<button class="card fold" data-l="${l.k}"><span class="ik"></span>
       <span class="tx"><b>${esc(l.n)}</b><small>${ileP(ile[l.k] || 0)}</small></span><span class="str">›</span></button>`).join('')}</div>`;
   $('#wrocBib').onclick = () => ekranBiblioteki(fid);
@@ -413,7 +458,7 @@ async function ekranFolderu(fid, lk, msg, info = true){
   }
   app.innerHTML = `${sciezkaFolderu(f, l)}
     <h1>${esc(l.n)}</h1>
-    <p class="intro">Tu są ${esc(l.o)}. Kliknij „Wgraj zdjęcia lub pliki PDF” i wybierz pliki (na telefonie można też od razu zrobić zdjęcie). Po wgraniu plik pojawi się na liście, najnowszy na górze. Kliknij plik, żeby go obejrzeć, albo usuń go.</p>
+    <p class="intro">Tu są ${esc(l.o.replace('{KTO}', kto()))}. ${esc(kto())} klika „Wgraj zdjęcia lub pliki PDF” i wybiera pliki (na telefonie można też od razu zrobić zdjęcie). Po wgraniu plik pojawi się na liście, najnowszy na górze. Po kliknięciu pliku otwiera się jego podgląd; plik można też usunąć.</p>
     ${error ? komunikat(bladPliku(error)) : ''}${msg ? komunikat(msg, info) : ''}
     <label class="btn full wgraj" for="plikiWybor" id="wgraj">+ Wgraj zdjęcia lub pliki PDF</label>
     <input type="file" id="plikiWybor" class="hide" multiple accept="image/jpeg,image/png,image/webp,image/*,application/pdf,.pdf">
@@ -424,7 +469,7 @@ async function ekranFolderu(fid, lk, msg, info = true){
         <div class="opis"><b>${esc(p.nazwa)}</b><small>Wgrane: ${czas(p.utworzono)}${p.rozmiar ? ' · ' + wielkosc(p.rozmiar) : ''}</small>
           <div class="acts"><button class="btn" data-zobacz="${p.id}">Zobacz</button><button class="btn2" data-usun="${p.id}">Usuń</button></div></div>
       </div>`).join('')}</div>`
-    : `<div class="card empty" id="lista"><b>W tym folderze nie ma jeszcze plików.</b><br>Kliknij „Wgraj zdjęcia lub pliki PDF”, żeby dodać pierwszy.</div>`}`;
+    : `<div class="card empty" id="lista"><b>W tym folderze nie ma jeszcze plików.</b><br>Po kliknięciu „Wgraj zdjęcia lub pliki PDF” można dodać pierwszy.</div>`}`;
   $('#wrocBib').onclick = () => l.grupa ? ekranPodfolderow(fid, l.grupa.k) : ekranBiblioteki(fid);
   app.querySelectorAll('[data-zobacz]').forEach(b => b.onclick = () => podglad(pliki.find(p => p.id === b.dataset.zobacz), linki));
   app.querySelectorAll('[data-usun]').forEach(b => b.onclick = () => ekranUsunPlik(fid, lk, pliki.find(p => p.id === b.dataset.usun)));
@@ -457,7 +502,7 @@ async function wgraj(fid, lk, files){
       if (file.size > MAX_PDF){ bledy.push(`${nazwa}: plik jest za duży (najwyżej 20 MB).`); continue; }
       blob = file; typ = 'pdf'; ext = 'pdf'; mime = 'application/pdf';
     } else if (zdj){
-      try { blob = await zmniejsz(file); } catch(e){ bledy.push(`${nazwa}: nie da się odczytać tego zdjęcia. Zapisz je jako JPG i wgraj jeszcze raz.`); continue; }
+      try { blob = await zmniejsz(file); } catch(e){ bledy.push(`${nazwa}: nie da się odczytać tego zdjęcia. Trzeba zapisać je jako JPG i wgrać jeszcze raz.`); continue; }
       typ = 'zdjecie'; ext = 'jpg'; mime = 'image/jpeg'; nazwa = nazwa.replace(/\.[^.]+$/, '') + '.jpg';
     } else { bledy.push(`${nazwa}: to nie jest zdjęcie ani plik PDF.`); continue; }
     const sciezka = `${uid}/${fid}/${lk}/${crypto.randomUUID()}.${ext}`;
@@ -475,8 +520,8 @@ function podglad(p, linki){
   const url = linki[p.sciezka];
   const o = document.createElement('div'); o.className = 'okno'; o.id = 'okno'; o.setAttribute('role', 'dialog');
   o.innerHTML = `<div class="gora"><b>${esc(p.nazwa)}</b><button class="btn2" id="zamknij">Zamknij</button></div>
-    <div class="info">Podgląd pliku. Kliknij „Zamknij”, żeby wrócić do folderu.</div>
-    <div class="tresc">${!url ? komunikat('Nie udało się otworzyć pliku. Zamknij i spróbuj ponownie.')
+    <div class="info">Podgląd pliku. Przycisk „Zamknij” wraca do folderu.</div>
+    <div class="tresc">${!url ? komunikat('Nie udało się otworzyć pliku. Trzeba zamknąć podgląd i spróbować ponownie.')
       : p.typ === 'pdf' ? `<iframe src="${esc(url)}" title="${esc(p.nazwa)}"></iframe><a class="btn" id="otworzPdf" href="${esc(url)}" target="_blank" rel="noopener">Otwórz PDF w nowej karcie</a>`
       : `<img src="${esc(url)}" alt="${esc(p.nazwa)}" id="duze">`}</div>`;
   document.body.appendChild(o); document.body.style.overflow = 'hidden';
@@ -488,7 +533,7 @@ function podglad(p, linki){
 
 function ekranUsunPlik(fid, lk, p, msg){
   app.innerHTML = `<div class="narrow" style="margin:auto"><h1>Usunąć plik?</h1>
-    <p class="intro">Plik <b>${esc(p.nazwa)}</b> zniknie na stałe z folderu „${esc(LISCIE[lk].n)}”. Tego nie da się cofnąć. Po usunięciu wrócisz do folderu.</p>
+    <p class="intro">Plik <b>${esc(p.nazwa)}</b> zniknie na stałe z folderu „${esc(LISCIE[lk].n)}”. Tego nie da się cofnąć. Po usunięciu otworzy się znowu folder.</p>
     ${msg ? komunikat(msg) : ''}
     <div class="acts"><button class="btn2" id="nie">Nie, wróć</button><button class="btn" id="tak">Tak, usuń na stałe</button></div></div>`;
   $('#nie').onclick = () => ekranFolderu(fid, lk);
@@ -508,8 +553,8 @@ async function ilePlikowMieszkania(fid){
 }
 
 function ekranUsunZablokowane(f, n){
-  app.innerHTML = `<div class="narrow" style="margin:auto"><h1>Najpierw usuń pliki</h1>
-    <p class="intro">Mieszkania <b>${esc(f.ulica)}</b> nie można teraz usunąć, bo w jego Bibliotece jest ${ileP(n)}. Najpierw usuń wszystkie pliki z Biblioteki, potem wróć tutaj i usuń mieszkanie.</p>
+  app.innerHTML = `<div class="narrow" style="margin:auto"><h1>Najpierw trzeba usunąć pliki</h1>
+    <p class="intro">Mieszkania <b>${esc(f.ulica)}</b> nie można teraz usunąć, bo w jego Bibliotece jest ${ileP(n)}. ${esc(kto())} musi najpierw usunąć wszystkie pliki z Biblioteki, a potem usunąć mieszkanie.</p>
     <div class="acts"><button class="btn2" id="nie">Wróć do mieszkania</button><button class="btn" id="doBib">Otwórz Bibliotekę</button></div></div>`;
   $('#nie').onclick = () => ekranMieszkania(f.id);
   $('#doBib').onclick = () => ekranBiblioteki(f.id);
