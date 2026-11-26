@@ -336,8 +336,8 @@ function ekranFormularza(f, msg, wpis, krok1){
       ${pole('ulica','Ulica i numer *','text','placeholder="np. Krasińskiego 3/4"')}
       ${pole('miasto','Miasto')}
       ${pole('firma_remontowa','Firma remontowa <small>(nieobowiązkowo)</small>','text','maxlength="80"')}
-      <div class="grid g2">${pole('metraz','Metraż (m²)','text','inputmode="decimal"')}${pole('budzet','Budżet remontu (zł)','text','inputmode="decimal"')}</div>
-      <div class="grid g2">${pole('data_startu','Data startu remontu','date')}${pole('termin_konca','Termin końca','date')}</div>
+      <div class="grid g2"><div>${pole('metraz','Metraż (m²)','text','inputmode="decimal"')}</div><div>${pole('budzet','Budżet remontu (zł)','text','inputmode="decimal"')}</div></div>
+      <div class="grid g2"><div>${pole('data_startu','Data startu remontu','date')}</div><div>${pole('termin_konca','Termin końca','date')}</div></div>
       <label for="opis">Opis <small>(nieobowiązkowy)</small></label><textarea id="opis" rows="3">${esc(v.opis ?? '')}</textarea>
       ${k1 ? `<div class="acts"><button type="button" class="btn2" id="anuluj">Anuluj</button><button class="btn" id="zapisz">Dalej: pliki</button></div>` : `<button class="btn full" style="margin-top:16px" id="zapisz">Zapisz zmiany</button>`}
     </form></div>`;
