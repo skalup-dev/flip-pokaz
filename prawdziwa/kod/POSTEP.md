@@ -13,16 +13,16 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 ## Klocki
 | Klocek | Stan |
 |---|---|
-| 6 Szef firmy (zaproszenie linkiem, dostęp, Zabierz/Przywróć, widok firmy, podpis nazwą firmy) | w budowie |
-| 7 Paragony i materiały | czeka |
-| 8 Pieniądze mieszkania | czeka |
-| 9 Terminy | czeka |
-| 10 Płatności | czeka |
-| 11 Poprawki | czeka |
-| 12 Chat z firmą + Chat ogólny | czeka |
-| 13 Powiadomienia (dzwonek) | czeka |
-| 14 Ilości z planu | czeka |
-| 15 Szukaj ekipy | czeka |
+| 6 Szef firmy (zaproszenie linkiem, dostęp, Zabierz/Przywróć, widok firmy, podpis nazwą firmy) | zbudowany, testy zastępcze OK, test bazy lokalnie OK (sql/06_szef_firmy.sql) |
+| 7 Paragony i materiały | w budowie (pomocnik A, razem z 8) |
+| 8 Pieniądze mieszkania | w budowie (pomocnik A) |
+| 9 Terminy | w budowie (pomocnik B, razem z 10) |
+| 10 Płatności | w budowie (pomocnik B) |
+| 11 Poprawki | w budowie (pomocnik C, razem z 14) |
+| 12 Chat z firmą + Chat ogólny | w budowie (pomocnik D, razem z 13) |
+| 13 Powiadomienia (dzwonek) | w budowie (pomocnik D) |
+| 14 Ilości z planu | w budowie (pomocnik C) |
+| 15 Szukaj ekipy | w budowie (pomocnik E) |
 
 ## Założenia przyjęte bez pytania (do potwierdzenia przez Pati)
 1. Zaproszenie szefa firmy: link do skopiowania (bez SMS). Szef firmy zakłada zwykłe konto i otwiera link – konto staje się kontem firmy.
@@ -33,4 +33,5 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 (uzupełniane przy klockach 6, 7, 13)
 
 ## Dziennik
+- 27.11 23:40 – klocek 6 gotowy (commit 604d77f), pola pieniędzy mieszkania w 06. Klocki 7–15 zlecone 5 pomocnikom (osobne kopie repo); każdy oddaje js/kNN_*.js + sql/NN_*.sql + testy. Potem: złożenie, 06_reszta.sql, testy na prawdziwej bazie, obrazy.
 - 27.11 23:15 – plan, POSTEP.md.
