@@ -46,6 +46,9 @@ h1{font-size:22px;margin:0 0 6px}h2{font-size:18px;margin:16px 0 8px}
 .logo{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .btn2{flex:none;white-space:nowrap}
 .stopka{text-align:center;font-size:13px;padding:18px 16px 24px}
+.moduly{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-bottom:12px}
+.moduly .btnBib{margin:0}
+.link-zapr{word-break:break-all;font-size:13px;border:1px dashed var(--z);border-radius:8px;padding:8px;margin:8px 0;background:var(--k)}
 /* ---------- Lista prac ---------- */
 .bar{height:10px;border:1px solid var(--z);border-radius:999px;overflow:hidden;margin-top:8px}
 .bar i{display:block;height:100%;background:var(--c)}
@@ -165,13 +168,25 @@ const BLEDY = {
 const blad = e => { const m = (e && (e.message || e.error_description)) || String(e); for (const k in BLEDY) if (m.includes(k)) return BLEDY[k]; if (/rate limit/i.test(m)) return 'Za dużo prób. Trzeba odczekać chwilę i spróbować ponownie.'; return 'Coś poszło nie tak: ' + m; };
 
 const S = { user:null, flats:[], tryb:'logowanie', profil:null };
-const kto = () => (S.profil && S.profil.imie && S.profil.imie.trim()) || 'Właściciel aplikacji';
+const jestFirma = () => !!(S.profil && S.profil.rola === 'firma');
+const kto = () => jestFirma() ? ((S.profil.nazwa_firmy && S.profil.nazwa_firmy.trim()) || (S.profil.imie && S.profil.imie.trim()) || 'Firma remontowa')
+  : ((S.profil && S.profil.imie && S.profil.imie.trim()) || 'Właściciel aplikacji');
+const wlascicielId = fid => { const f = S.flats && S.flats.find(x => x.id === fid); return (f && f.wlasciciel) || S.user.id; };
+
+/* ---------- Moduły (klocki 6–15) ----------
+   rejestrujModul({ k:'klucz', n:'Nazwa przycisku', ekran:fid => ..., firma:true|false, wlasciciel:true|false,
+                    etykieta:fid => 'tekst przycisku' (opcjonalnie), dalej:'nazwa w „Co będzie dalej”' (opcjonalnie) })
+   HAKI.poWczytaniu: funkcje async wywoływane po wczytaniu mieszkań (np. dzwonek). HAKI.pasek: funkcje po odświeżeniu paska. */
+const MODULY = [], HAKI = { poWczytaniu:[], pasek:[] };
+function rejestrujModul(m){ if (!MODULY.some(x => x.k === m.k)) MODULY.push(m); }
 let sb = null;
 
 function komunikat(txt, info){ return `<div class="msg ${info?'info':''}" role="alert">${esc(txt)}</div>`; }
 
 /* ---------- start ---------- */
 function start(){
+  const zp = new URLSearchParams(location.search).get('zaproszenie');
+  try { if (zp) localStorage.setItem('flip_zaproszenie', zp); S.zapr = zp || localStorage.getItem('flip_zaproszenie'); } catch(e){ S.zapr = zp; }
   const cfg = window.FLIP_CFG || {};
   if (!cfg.url || !cfg.key || !window.supabase){
     app.innerHTML = `<div class="narrow" style="margin:auto"><h1>Aplikacja nie jest jeszcze podłączona</h1>
@@ -194,6 +209,7 @@ function pasek(){
   $('#logo').title = firma || '';
   $('#mojeDane').classList.toggle('hide', !S.user || !!S.recovery);
   $('#who').textContent = S.user ? S.user.email : '';
+  HAKI.pasek.forEach(h => { try { h(); } catch(e){} });
   $('#who').classList.toggle('hide', !S.user);
   $('#wyloguj').classList.toggle('hide', !S.user);
 }
@@ -242,7 +258,7 @@ function ekranLogowania(msg, info){
         const haslo = $('#haslo').value, h2 = $('#haslo2').value, imie = $('#imie').value.trim();
         if (haslo.length < 8) { f.classList.remove('load'); return ekranLogowaniaZ('Hasło musi mieć co najmniej 8 znaków.', email, imie); }
         if (haslo !== h2) { f.classList.remove('load'); return ekranLogowaniaZ('Hasła nie są takie same.', email, imie); }
-        const { data, error } = await sb.auth.signUp({ email, password: haslo, options:{ data:{ imie }, emailRedirectTo: location.origin + location.pathname } });
+        const { data, error } = await sb.auth.signUp({ email, password: haslo, options:{ data:{ imie }, emailRedirectTo: location.origin + location.pathname + (S.zapr ? '?zaproszenie=' + S.zapr : '') } });
         if (error) throw error;
         if (!data.session){ S.tryb = 'logowanie'; ekranLogowania('Konto założone. Na skrzynkę ' + email + ' przyszedł mail z linkiem. Po kliknięciu linku można się tutaj zalogować.', true); }
       } else {
@@ -275,11 +291,21 @@ function ekranNoweHaslo(msg){
 /* ---------- mieszkania ---------- */
 async function wczytaj(msg){
   app.innerHTML = '<p>Wczytuję mieszkania…</p>';
-  const [{ data, error }, pr] = await Promise.all([ sb.from('mieszkania').select('*'), sb.from('profile').select('*').eq('id', S.user.id) ]);
+  let info = msg;
+  if (S.zapr){
+    const k = S.zapr; S.zapr = null; try { localStorage.removeItem('flip_zaproszenie'); } catch(e){}
+    if (location.search.includes('zaproszenie')) history.replaceState(null, '', location.pathname);
+    const r = await sb.rpc('przyjmij_zaproszenie', { k });
+    info = r.error ? 'Zaproszenia nie udało się przyjąć: ' + (r.error.message || '').replace(/^.*?: /, '') : 'Zaproszenie przyjęte. To konto jest teraz kontem firmy remontowej i widzi mieszkanie, do którego dostało dostęp.';
+  }
+  const pr = await sb.from('profile').select('*').eq('id', S.user.id);
   if (pr && !pr.error) S.profil = (pr.data && pr.data[0]) || null; pasek();
+  const { data, error } = jestFirma() ? await sb.rpc('zlecenia_firmy') : await sb.from('mieszkania').select('*');
+  msg = info;
   if (error){ app.innerHTML = komunikat(blad(error)) + '<button class="btn" id="ponow">Spróbuj ponownie</button>'; $('#ponow').onclick = () => wczytaj(); return; }
   S.flats = (data || []).sort((a,b) => a.ulica.localeCompare(b.ulica, 'pl', {numeric:true}));
   await wczytajStat();
+  for (const h of HAKI.poWczytaniu){ try { await h(); } catch(e){} }
   ekranListy(msg);
 }
 
@@ -301,7 +327,14 @@ function ekranListy(msg){
   const fl = S.flats;
   const budzet = fl.reduce((s,f) => s + (Number(f.budzet) || 0), 0);
   const late = fl.filter(spozn).length;
-  app.innerHTML = `<h1>Moje mieszkania</h1>
+  const F = jestFirma();
+  app.innerHTML = F ? `<h1>Moje zlecenia</h1>
+    <p class="intro">Tu są mieszkania, które ${esc(kto())} remontuje. Właściciel aplikacji dał do nich dostęp zaproszeniem. Po kliknięciu mieszkania otworzą się jego dane, lista prac i pozostałe zakładki.</p>
+    ${msg ? komunikat(msg, true) : ''}
+    <div class="grid g2" style="margin-bottom:12px">
+      <div class="card dark kpi"><small>Mieszkania</small><div id="kpiN">${fl.length}</div></div>
+      <div class="card dark kpi"><small>Po terminie</small><div id="kpiL">${late}</div></div>
+    </div>` : `<h1>Moje mieszkania</h1>
     <p class="intro">${esc(kto())} ma tu wszystkie swoje mieszkania. Przy każdym mieszkaniu widać gotowość: ile prac jest już odznaczonych jako zrobione. Po kliknięciu mieszkania otworzą się jego dane.</p>
     ${msg ? komunikat(msg, true) : ''}
     <div class="grid g3" style="margin-bottom:12px">
@@ -313,38 +346,47 @@ function ekranListy(msg){
     <div id="lista">${fl.length ? fl.map(f => `
       <button class="card flat" data-id="${f.id}">
         <b>${esc(f.ulica)}</b>${f.miasto ? `, ${esc(f.miasto)}` : ''}
-        <div class="meta"><span>Metraż: ${m2(f.metraz)}</span><span>Budżet: ${zl(f.budzet)}</span>
+        <div class="meta"><span>Metraż: ${m2(f.metraz)}</span>${F ? '' : `<span>Budżet: ${zl(f.budzet)}</span>`}
         <span class="${spozn(f)?'late':''}">Termin końca: ${dt(f.termin_konca)}${spozn(f)?' – po terminie':''}</span></div>
         ${S.stat ? (S.stat[f.id] ? `<div class="got"><b>Gotowość: ${procent(S.stat[f.id].d, S.stat[f.id].a)}%</b> (${S.stat[f.id].d} z ${S.stat[f.id].a} ${pl(S.stat[f.id].a, 'pracy', 'prac', 'prac')})</div>${pasekP(procent(S.stat[f.id].d, S.stat[f.id].a))}` : '<div class="got">Gotowość: brak listy prac</div>') : ''}
-      </button>`).join('') : `<div class="card empty"><b>Nie ma jeszcze żadnego mieszkania.</b><br>Po kliknięciu „Dodaj mieszkanie” można dodać pierwsze.</div>`}</div>`;
-  $('#dodaj').onclick = () => { S.kreator = null; ekranFormularza(); };
+      </button>`).join('') : F ? `<div class="card empty"><b>Nie ma jeszcze żadnego zlecenia.</b><br>Mieszkanie pojawi się tutaj, gdy Właściciel aplikacji wyśle link zaproszenia i ${esc(kto())} go otworzy.</div>` : `<div class="card empty"><b>Nie ma jeszcze żadnego mieszkania.</b><br>Po kliknięciu „Dodaj mieszkanie” można dodać pierwsze.</div>`}</div>`;
+  if (!F) $('#dodaj').onclick = () => { S.kreator = null; ekranFormularza(); };
   app.querySelectorAll('.flat').forEach(b => b.onclick = () => ekranMieszkania(b.dataset.id));
+}
+
+function przyciskiModulow(f){
+  const F = jestFirma();
+  const lista = [
+    { k:'biblioteka', n:'Biblioteka', etykieta:() => 'Biblioteka – zdjęcia i pliki PDF', firma:true, ekran:fid => ekranBiblioteki(fid) },
+    { k:'listaPrac', n:'Lista prac', etykieta:fid => 'Lista prac' + (S.stat && S.stat[fid] ? ` – ${S.stat[fid].d} z ${S.stat[fid].a} (${procent(S.stat[fid].d, S.stat[fid].a)}%)` : ''), firma:true, ekran:fid => ekranListaPrac(fid) },
+    ...MODULY ].filter(m => F ? m.firma : m.wlasciciel !== false).sort((a, b) => a.n.localeCompare(b.n, 'pl'));
+  return lista;
 }
 
 function ekranMieszkania(id, msg){
   const f = S.flats.find(x => x.id === id); if (!f) return ekranListy();
-  app.innerHTML = `<button class="btnT" id="wroc">← Moje mieszkania</button>
-    <h1>${esc(f.ulica)}</h1><p class="intro">Dane mieszkania. „Lista prac” pokazuje, co jest do zrobienia i co już zrobione. „Biblioteka” to zdjęcia i pliki PDF mieszkania. ${esc(kto())} może też zmienić dane albo usunąć mieszkanie.</p>
+  const F = jestFirma(), mod = przyciskiModulow(f);
+  const dalej = [['chat', f.firma_remontowa && f.firma_remontowa.trim() ? 'Chat z firmą ' + esc(f.firma_remontowa.trim()) : 'Chat z firmą remontową'], ['platnosci', 'Płatności'], ['terminy', 'Terminy']].filter(([k]) => !MODULY.some(m => m.k === k)).map(x => x[1]);
+  app.innerHTML = `<button class="btnT" id="wroc">← ${F ? 'Moje zlecenia' : 'Moje mieszkania'}</button>
+    <h1>${esc(f.ulica)}</h1><p class="intro">${F ? `Dane mieszkania, które ${esc(kto())} remontuje. Przyciski poniżej otwierają listę prac, zdjęcia i pozostałe zakładki. Dane zmienia tylko Właściciel aplikacji.` : `Dane mieszkania. „Lista prac” pokazuje, co jest do zrobienia i co już zrobione. „Biblioteka” to zdjęcia i pliki PDF mieszkania. ${esc(kto())} może też zmienić dane albo usunąć mieszkanie.`}</p>
     ${msg ? komunikat(msg, true) : ''}
-    <div class="dwa"><button class="btn btnBib" id="listaPrac">Lista prac${S.stat && S.stat[f.id] ? ` – ${S.stat[f.id].d} z ${S.stat[f.id].a} (${procent(S.stat[f.id].d, S.stat[f.id].a)}%)` : ''}</button><button class="btn btnBib" id="biblioteka">Biblioteka – zdjęcia i pliki PDF</button></div>
+    <div class="moduly">${mod.map(m => `<button class="btn btnBib" id="${m.k === 'biblioteka' || m.k === 'listaPrac' ? m.k : 'm-' + m.k}" data-mod="${m.k}">${esc(m.etykieta ? m.etykieta(f.id) : m.n)}</button>`).join('')}</div>
     <div class="card">
       <div class="row"><span>Ulica i numer</span><b>${esc(f.ulica)}</b></div>
       <div class="row"><span>Miasto</span><b>${esc(f.miasto) || '–'}</b></div>
       <div class="row"><span>Firma remontowa</span><b>${esc(f.firma_remontowa) || '–'}</b></div>
       ${S.stat ? `<div class="row"><span>Gotowość</span><b>${gotowosc(f.id)}</b></div>` : ''}
       <div class="row"><span>Metraż</span><b>${m2(f.metraz)}</b></div>
-      <div class="row"><span>Budżet remontu</span><b>${zl(f.budzet)}</b></div>
+      ${F ? '' : `<div class="row"><span>Budżet remontu</span><b>${zl(f.budzet)}</b></div>`}
       <div class="row"><span>Data startu remontu</span><b>${dt(f.data_startu)}</b></div>
       <div class="row"><span>Termin końca</span><b class="${spozn(f)?'late':''}">${dt(f.termin_konca)}</b></div>
-      ${f.opis ? `<div class="row"><span>Opis</span><b style="white-space:pre-wrap;text-align:right">${esc(f.opis)}</b></div>` : ''}
+      ${!F && f.opis ? `<div class="row"><span>Opis</span><b style="white-space:pre-wrap;text-align:right">${esc(f.opis)}</b></div>` : ''}
     </div>
-    <div class="card"><b>Co będzie dalej</b><br>W kolejnych krokach dojdą tu: ${f.firma_remontowa && f.firma_remontowa.trim() ? 'Chat z firmą ' + esc(f.firma_remontowa.trim()) : 'Chat z firmą remontową'}, Płatności i Terminy.</div>
-    <div class="acts"><button class="btn" id="zmien">Zmień dane</button><button class="btn2" id="usun">Usuń mieszkanie</button></div>`;
+    ${dalej.length ? `<div class="card"><b>Co będzie dalej</b><br>W kolejnych krokach dojdą tu: ${dalej.length > 1 ? dalej.slice(0, -1).join(', ') + ' i ' + dalej[dalej.length - 1] : dalej[0]}.</div>` : ''}
+    ${F ? '' : '<div class="acts"><button class="btn" id="zmien">Zmień dane</button><button class="btn2" id="usun">Usuń mieszkanie</button></div>'}`;
   $('#wroc').onclick = () => ekranListy();
-  $('#biblioteka').onclick = () => ekranBiblioteki(f.id);
-  $('#listaPrac').onclick = () => ekranListaPrac(f.id);
-  $('#zmien').onclick = () => ekranFormularza(f);
-  $('#usun').onclick = () => ekranUsun(f);
+  app.querySelectorAll('[data-mod]').forEach(b => b.onclick = () => mod.find(m => m.k === b.dataset.mod).ekran(f.id));
+  if (!F){ $('#zmien').onclick = () => ekranFormularza(f); $('#usun').onclick = () => ekranUsun(f); }
 }
 
 function ekranUsun(f, msg){
@@ -623,10 +665,10 @@ async function ekranPomieszczenia(fid, pid, msg){
 }
 
 async function wgrajZdjeciePracy(fid, prId, blob, nazwa){
-  const sciezka = `${S.user.id}/${fid}/postepy/${crypto.randomUUID()}.jpg`;
+  const sciezka = `${wlascicielId(fid)}/${fid}/postepy/${crypto.randomUUID()}.jpg`;
   const up = await sb.storage.from(SCHOWEK).upload(sciezka, blob, { contentType:'image/jpeg', upsert:false });
   if (up.error) return bladPliku(up.error);
-  const { error } = await sb.from('pliki').insert({ mieszkanie:fid, folder:'postepy', nazwa, sciezka, typ:'zdjecie', rozmiar:blob.size, praca:prId });
+  const { error } = await sb.from('pliki').insert({ mieszkanie:fid, wlasciciel:wlascicielId(fid), folder:'postepy', nazwa, sciezka, typ:'zdjecie', rozmiar:blob.size, praca:prId });
   if (error){ await sb.storage.from(SCHOWEK).remove([sciezka]); return bladPliku(error); }
   return null;
 }
@@ -812,7 +854,7 @@ async function ekranBiblioteki(fid, msg){
     <h1>Biblioteka – ${esc(f.ulica)}</h1>
     <p class="intro">Tu są wszystkie zdjęcia i pliki PDF tego mieszkania, ułożone w folderach od A do Z. Po kliknięciu folder się otwiera. W folderze ${esc(kto())} wgrywa zdjęcia i pliki PDF, ogląda je i usuwa.</p>
     ${error ? komunikat(bladPliku(error)) : ''}${msg ? komunikat(msg, true) : ''}
-    <div id="foldery">${FOLDERY.map(g => {
+    <div id="foldery">${FOLDERY.filter(g => !jestFirma() || g.k !== 'faktury').map(g => {
       const n = kluczeGrupy(g).reduce((s, k) => s + (ile[k] || 0), 0);
       return `<button class="card fold" data-g="${g.k}"><span class="ik"></span>
         <span class="tx"><b>${esc(g.n)}</b><small>${g.pod ? 'Podfoldery: ' + g.pod.map(l => esc(l.n)).join(', ') + ' · ' : ''}${ileP(n)}</small></span><span class="str">›</span></button>`;
@@ -857,14 +899,14 @@ async function ekranFolderu(fid, lk, msg, info = true){
     <h1>${esc(l.n)}</h1>
     <p class="intro">Tu są ${esc(l.o.replace('{KTO}', kto()))}. ${esc(kto())} klika „Wgraj zdjęcia lub pliki PDF” i wybiera pliki (na telefonie można też od razu zrobić zdjęcie). Po wgraniu plik pojawi się na liście, najnowszy na górze. Po kliknięciu pliku otwiera się jego podgląd; plik można też usunąć.</p>
     ${error ? komunikat(bladPliku(error)) : ''}${msg ? komunikat(msg, info) : ''}
-    <label class="btn full wgraj" for="plikiWybor" id="wgraj">+ Wgraj zdjęcia lub pliki PDF</label>
+    ${jestFirma() && !['postepy','poprawki','paragony'].includes(lk) ? '<p class="info2">Do tego folderu pliki wgrywa Właściciel aplikacji. Firma remontowa może je oglądać.</p>' : `<label class="btn full wgraj" for="plikiWybor" id="wgraj">+ Wgraj zdjęcia lub pliki PDF</label>`}
     <input type="file" id="plikiWybor" class="hide" multiple accept="image/jpeg,image/png,image/webp,image/*,application/pdf,.pdf">
     <h2>${pliki.length ? 'Pliki w folderze (' + pliki.length + ')' : 'Pliki w folderze'}</h2>
     ${pliki.length ? `<div class="files" id="lista">${pliki.map(p => `
       <div class="plik" data-id="${p.id}">
         <button class="mini" data-zobacz="${p.id}" aria-label="Zobacz ${esc(p.nazwa)}">${p.typ === 'pdf' ? '<span class="pdf">PDF</span>' : (linki[p.sciezka] ? `<img src="${esc(linki[p.sciezka])}" alt="${esc(p.nazwa)}" loading="lazy">` : '<span class="pdf">ZDJĘCIE</span>')}</button>
         <div class="opis"><b>${esc(p.nazwa)}</b><small>Wgrane: ${czas(p.utworzono)}${p.rozmiar ? ' · ' + wielkosc(p.rozmiar) : ''}</small>
-          <div class="acts"><button class="btn" data-zobacz="${p.id}">Zobacz</button><button class="btn2" data-usun="${p.id}">Usuń</button></div></div>
+          <div class="acts"><button class="btn" data-zobacz="${p.id}">Zobacz</button>${jestFirma() ? '' : `<button class="btn2" data-usun="${p.id}">Usuń</button>`}</div></div>
       </div>`).join('')}</div>`
     : `<div class="card empty" id="lista"><b>W tym folderze nie ma jeszcze plików.</b><br>Po kliknięciu „Wgraj zdjęcia lub pliki PDF” można dodać pierwszy.</div>`}`;
   $('#wrocBib').onclick = () => l.grupa ? ekranPodfolderow(fid, l.grupa.k) : ekranBiblioteki(fid);
@@ -887,7 +929,7 @@ async function zmniejsz(file){
 
 async function wgraj(fid, lk, files, powrot, etykieta = '#wgraj'){
   if (!files.length) return;
-  const uid = S.user.id; const bledy = []; let ok = 0;
+  const uid = wlascicielId(fid); const bledy = []; let ok = 0;
   const pasekW = (i) => { const w = $(etykieta); if (w){ w.textContent = `Wgrywam ${i} z ${files.length}…`; w.classList.add('load'); } };
   for (let i = 0; i < files.length; i++){
     pasekW(i + 1);
@@ -905,7 +947,7 @@ async function wgraj(fid, lk, files, powrot, etykieta = '#wgraj'){
     const sciezka = `${uid}/${fid}/${lk}/${crypto.randomUUID()}.${ext}`;
     const up = await sb.storage.from(SCHOWEK).upload(sciezka, blob, { contentType:mime, upsert:false });
     if (up.error){ bledy.push(`${nazwa}: ${bladPliku(up.error)}`); continue; }
-    const { error } = await sb.from('pliki').insert({ mieszkanie:fid, folder:lk, nazwa, sciezka, typ, rozmiar:blob.size });
+    const { error } = await sb.from('pliki').insert({ mieszkanie:fid, wlasciciel:uid, folder:lk, nazwa, sciezka, typ, rozmiar:blob.size });
     if (error){ await sb.storage.from(SCHOWEK).remove([sciezka]); bledy.push(`${nazwa}: ${bladPliku(error)}`); continue; }
     ok++;
   }
@@ -963,7 +1005,10 @@ function ekranUsunZablokowane(f, n){
   $('#doBib').onclick = () => ekranBiblioteki(f.id);
 }
 
-start();
 </script>
+<!-- klocki 6–15: każdy we własnym pliku, dopinany przez rejestrujModul() -->
+<script src="js/k06_firma.js"></script>
+<!-- KLOCKI_KONIEC -->
+<script>start();</script>
 </body>
 </html>
