@@ -108,11 +108,11 @@ begin
       if not exists (select 1 from public.prace p where p.mieszkanie = new.mieszkanie and p.etap = new.etap and not p.zrobiona and p.id <> new.id) then
         perform public.powiadom_mieszkanie(new.mieszkanie, 'etap',
           'Etap skończony: ' || new.etap || '. ' || coalesce(etapy[new.etap], 'etap'),
-          'listaPrac', null, true, 'etap:' || new.mieszkanie || ':' || new.etap);
+          'terminy', null, true, 'etap:' || new.mieszkanie || ':' || new.etap);
         -- osoba, która skończyła etap, też dostaje „Etap skończony” (to zdarzenie idzie też na Telegram)
         perform public.dodaj_zdarzenie(auth.uid(), new.mieszkanie, 'etap',
           'Etap skończony: ' || new.etap || '. ' || coalesce(etapy[new.etap], 'etap'),
-          'listaPrac', null, 'etap:' || new.mieszkanie || ':' || new.etap, true);
+          'terminy', null, 'etap:' || new.mieszkanie || ':' || new.etap, true);
       end if;
     exception when others then raise warning 'Powiadomienie o pracy nie powstało: %', sqlerrm;
     end;
@@ -233,19 +233,14 @@ do $$ begin
   end if;
 end $$;
 
--- 5. Zdarzenia z tabel innych klocków (7, 9, 10, 11). Kolumny czytane ostrożnie (po nazwie), bo tabele robią inne klocki.
--- Pomocnicze: pierwsza niepusta wartość spośród podanych kolumn wiersza
+-- 5. Zdarzenia z tabel innych klocków: 9 (terminy), 10 (platnosci), 11 (poprawki), 7 (dokumenty – jeszcze w budowie).
+--    Funkcje powstają zawsze, triggery tylko wtedy, gdy tabela już jest (na dole pliku).
+
+-- 5a. Klocek 7: paragon albo faktura (faktury widzi tylko Właściciel aplikacji).
+--     Tabela klocka 7 jeszcze się buduje: nazwa „dokumenty” i kolumny czytane po nazwie są do podmiany po jego oddaniu.
 create or replace function public.pole(j jsonb, klucze text[]) returns text
 language sql immutable as $$ select (select nullif(trim(j->>k), '') from unnest(klucze) with ordinality u(k, i) where nullif(trim(j->>k), '') is not null order by i limit 1) $$;
--- Czy wiersz właśnie stał się „skończony / zrobiony / zapłacony” (kolumna tak/nie, data albo stan)
-create or replace function public.stal_sie(n jsonb, o jsonb, flagi text[], daty text[], stany text[]) returns boolean
-language sql immutable as $$
-  select exists (select 1 from unnest(flagi) k where n->>k = 'true' and coalesce(o->>k, 'false') <> 'true')
-      or exists (select 1 from unnest(daty) k where n->>k is not null and o->>k is null)
-      or exists (select 1 from unnest(array['status','stan']) k where lower(n->>k) = any(stany) and lower(coalesce(o->>k, '')) <> all(stany)) $$;
-revoke all on function public.pole(jsonb, text[]), public.stal_sie(jsonb, jsonb, text[], text[], text[]) from public, anon, authenticated;
-
--- 5a. Klocek 7: paragon albo faktura (faktury widzi tylko Właściciel aplikacji)
+revoke all on function public.pole(jsonb, text[]) from public, anon, authenticated;
 create or replace function public.zdarzenie_dokumentu() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare j jsonb := to_jsonb(new); m uuid; f boolean; opis text; kw text;
@@ -264,83 +259,73 @@ begin
   return new;
 end $$;
 
--- 5b. Klocek 11: nowa poprawka i poprawka zrobiona
+-- 5b. Klocek 11 (poprawki): nowa poprawka → firmy; zrobiona (ze zdjęciem) → Właściciel aplikacji; zatwierdzona → firmy
 create or replace function public.zdarzenie_poprawki() returns trigger
 language plpgsql security definer set search_path = public as $$
-declare j jsonb := to_jsonb(new); m uuid; opis text;
+declare k text := ' (' || public.nazwa_konta(auth.uid()) || ')'; t text := public.skrot(new.tresc, 120);
 begin
   begin
-    m := (j->>'mieszkanie')::uuid;
-    opis := coalesce(public.pole(j, array['opis','nazwa','tytul','tresc']), 'bez opisu');
     if tg_op = 'INSERT' then
-      perform public.powiadom_mieszkanie(m, 'poprawka', 'Nowa poprawka: ' || opis || ' (' || public.nazwa_konta(auth.uid()) || ')', 'poprawki', null);
-    elsif public.stal_sie(j, to_jsonb(old), array['zrobiona','zrobione','gotowa','zatwierdzona','poprawiona'],
-                          array['zrobiona_kiedy','zrobiono','zatwierdzono','poprawiono'],
-                          array['zrobiona','zrobione','gotowa','gotowe','zatwierdzona','zatwierdzone','poprawiona']) then
-      perform public.powiadom_mieszkanie(m, 'poprawka', 'Poprawka zrobiona: ' || opis || ' (' || public.nazwa_konta(auth.uid()) || ')', 'poprawki', null);
+      perform public.powiadom_mieszkanie(new.mieszkanie, 'poprawka', 'Nowa poprawka: ' || t || k, 'poprawki', new.id::text);
+    else
+      if new.zrobiona and not old.zrobiona then
+        perform public.powiadom_mieszkanie(new.mieszkanie, 'poprawka', 'Poprawka zrobiona: ' || t || k || ' – czeka na zatwierdzenie', 'poprawki', new.id::text);
+      end if;
+      if new.zatwierdzona and not old.zatwierdzona then
+        perform public.powiadom_mieszkanie(new.mieszkanie, 'poprawka', 'Poprawka zatwierdzona: ' || t || k, 'poprawki', new.id::text);
+      end if;
     end if;
   exception when others then raise warning 'Powiadomienie o poprawce nie powstało: %', sqlerrm;
   end;
   return new;
 end $$;
 
--- 5c. Klocek 9: etap skończony (idzie też na Telegram) i etap przesunięty na później (opóźnienie)
-create or replace function public.zdarzenie_etapu() returns trigger
+-- 5c. Klocek 9 (terminy): etap dodany odznaczony jako zrobiony → „Etap skończony” (też na Telegram);
+--     etapy 1–7 kończą się z prac (4a). Przesunięcie data_do na później → „Opóźnienie”.
+create or replace function public.zdarzenie_terminu_etapu() returns trigger
 language plpgsql security definer set search_path = public as $$
-declare j jsonb := to_jsonb(new); o jsonb := to_jsonb(old); m uuid; nr text; nazwa text; kl text; tr text; dn text; dst text; k text;
+declare etapy text[] := array['Rozbiórki i przygotowanie','Elektryka','Hydraulika','Ściany i sufity',
+  'Łazienka – płytki i biały montaż','Podłogi i drzwi','Kuchnia, lampy i sprzątanie'];
+  nazwa text := case when new.nr is not null then new.nr || '. ' || coalesce(nullif(trim(new.nazwa), ''), etapy[new.nr]) else new.nazwa end;
+  kl text := 'etap:' || new.mieszkanie || ':' || coalesce(new.nr::text, new.id::text);
 begin
   begin
-    m := (j->>'mieszkanie')::uuid;
-    nr := public.pole(j, array['numer','etap','nr','kolejnosc']);
-    nazwa := coalesce(public.pole(j, array['nazwa','tytul','opis']), 'etap');
-    kl := 'etap:' || m || ':' || coalesce(nr, j->>'id');
-    if public.stal_sie(j, o, array['skonczony','zakonczony','zrobiony','gotowy'],
-                       array['koniec_faktyczny','skonczono','zakonczono','data_konca_faktyczna'],
-                       array['skonczony','zakonczony','zrobiony','gotowy']) then
-      tr := 'Etap skończony: ' || case when nr is not null and nazwa !~ '^\d' then nr || '. ' else '' end || nazwa;
-      perform public.powiadom_mieszkanie(m, 'etap', tr, 'terminy', null, true, kl);
-      perform public.dodaj_zdarzenie(auth.uid(), m, 'etap', tr, 'terminy', null, kl, true);
+    if new.zrobiony and not old.zrobiony then
+      perform public.powiadom_mieszkanie(new.mieszkanie, 'etap', 'Etap skończony: ' || nazwa, 'terminy', null, true, kl);
+      perform public.dodaj_zdarzenie(auth.uid(), new.mieszkanie, 'etap', 'Etap skończony: ' || nazwa, 'terminy', null, kl, true);
     end if;
-    foreach k in array array['koniec','termin','do','data_konca','koniec_plan','termin_konca'] loop
-      dn := j->>k; dst := o->>k;
-      if dn ~ '^\d{4}-\d{2}-\d{2}' and dst ~ '^\d{4}-\d{2}-\d{2}' and left(dn, 10)::date > left(dst, 10)::date then
-        perform public.powiadom_mieszkanie(m, 'opoznienie', 'Opóźnienie: etap ' || nazwa || ' przesunięty z '
-          || to_char(left(dst, 10)::date, 'DD.MM.YYYY') || ' na ' || to_char(left(dn, 10)::date, 'DD.MM.YYYY'), 'terminy', null);
-        exit;
-      end if;
-    end loop;
+    if old.data_do is not null and new.data_do is not null and new.data_do > old.data_do then
+      perform public.powiadom_mieszkanie(new.mieszkanie, 'opoznienie', 'Opóźnienie: etap ' || nazwa || ' przesunięty z '
+        || to_char(old.data_do, 'DD.MM.YYYY') || ' na ' || to_char(new.data_do, 'DD.MM.YYYY'), 'terminy', null);
+    end if;
   exception when others then raise warning 'Powiadomienie o etapie nie powstało: %', sqlerrm;
   end;
   return new;
 end $$;
 
--- 5d. Klocek 10: płatność zapłacona
+-- 5d. Klocek 10 (platnosci): płatność zapłacona → firmy
 create or replace function public.zdarzenie_platnosci() returns trigger
 language plpgsql security definer set search_path = public as $$
-declare j jsonb := to_jsonb(new); m uuid; opis text; kw text;
 begin
-  begin
-    m := (j->>'mieszkanie')::uuid;
-    opis := coalesce(public.pole(j, array['nazwa','opis','tytul','etap']), 'płatność');
-    kw := public.pole(j, array['kwota','suma']);
-    if public.stal_sie(j, to_jsonb(old), array['zaplacona','oplacona','zaplacone'], array['zaplacono','data_zaplaty','oplacono'],
-                       array['zaplacona','zaplacone','oplacona','oplacone']) then
-      perform public.powiadom_mieszkanie(m, 'platnosc', 'Płatność zapłacona: ' || opis || coalesce(' – ' || replace(kw, '.', ',') || ' zł', ''), 'platnosci', null);
-    end if;
-  exception when others then raise warning 'Powiadomienie o płatności nie powstało: %', sqlerrm;
-  end;
+  if new.zaplacona and not old.zaplacona then
+    begin
+      perform public.powiadom_mieszkanie(new.mieszkanie, 'platnosc', 'Płatność zapłacona: płatność ' || new.nr || ' – '
+        || replace(to_char(new.kwota, 'FM999999990.00'), '.', ',') || ' zł', 'platnosci', null);
+    exception when others then raise warning 'Powiadomienie o płatności nie powstało: %', sqlerrm;
+    end;
+  end if;
   return new;
 end $$;
 
--- Triggery tylko na tabelach, które już są i mają kolumnę „mieszkanie”
+-- Triggery tylko na tabelach, które już są
 do $$
 declare t record;
 begin
   for t in select * from (values
       ('dokumenty', 'dokumenty_zdarzenie', 'after insert', 'zdarzenie_dokumentu'),
-      ('poprawki', 'poprawki_zdarzenie', 'after insert or update', 'zdarzenie_poprawki'),
-      ('etapy', 'etapy_zdarzenie', 'after update', 'zdarzenie_etapu'),
-      ('platnosci', 'platnosci_zdarzenie', 'after update', 'zdarzenie_platnosci')) v(tab, trg, kiedy, fn) loop
+      ('poprawki', 'poprawki_zdarzenie', 'after insert or update of zrobiona, zatwierdzona', 'zdarzenie_poprawki'),
+      ('terminy', 'terminy_zdarzenie', 'after update of zrobiony, data_do', 'zdarzenie_terminu_etapu'),
+      ('platnosci', 'platnosci_zdarzenie', 'after update of zaplacona', 'zdarzenie_platnosci')) v(tab, trg, kiedy, fn) loop
     if to_regclass('public.' || t.tab) is not null and exists (select 1 from information_schema.columns c
          where c.table_schema = 'public' and c.table_name = t.tab and c.column_name = 'mieszkanie') then
       execute format('drop trigger if exists %I on public.%I', t.trg, t.tab);
@@ -348,3 +333,6 @@ begin
     end if;
   end loop;
 end $$;
+-- Sprzątanie po wcześniejszej wersji tego pliku (ogólne funkcje do tabel, których nie było)
+drop function if exists public.zdarzenie_etapu();
+drop function if exists public.stal_sie(jsonb, jsonb, text[], text[], text[]);

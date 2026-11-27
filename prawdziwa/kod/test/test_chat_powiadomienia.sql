@@ -1,7 +1,8 @@
 \set ON_ERROR_STOP 0
 \pset tuples_only on
 \pset format unaligned
--- Test klocków 12 (Chat) i 13 (Powiadomienia). Po supabase_stub, storage_stub, 01–05, sql/06, sql/12, sql/13.
+-- Test klocków 12 (Chat) i 13 (Powiadomienia). Kolejność jak w pliku zbiorczym: supabase_stub, storage_stub, 01–05,
+-- sql/06, 09, 10, 11, 12, 14, 15, 13 (na końcu). Zdarzenia klocków 9–11 testowane na ich prawdziwych tabelach.
 -- Każdy wiersz zaczyna się od OK albo ZLE. Na końcu: liczba OK i ZLE.
 -- Konta: 1111 Właściciel aplikacji (Marek), 2222 brat (nic nie widzi), 3333 firma A, 4444 firma B (inne mieszkanie)
 create temp table wynik(ok boolean, opis text);
@@ -183,34 +184,38 @@ set request.jwt.claim.sub to '11111111-1111-1111-1111-111111111111';
 update public.dostepy set aktywny=true where id='dddddddd-0000-0000-0000-000000000001';
 update public.zdarzenia set przeczytane=true where not przeczytane;
 
--- ===== Tabele innych klocków (zastępcze): triggery warunkowe po ponownym uruchomieniu pliku 13 =====
-reset role;
-create table if not exists public.dokumenty(id uuid primary key default gen_random_uuid(), mieszkanie uuid, rodzaj text, sklep text, kwota numeric);
-create table if not exists public.poprawki(id uuid primary key default gen_random_uuid(), mieszkanie uuid, opis text, zrobiona boolean default false);
-create table if not exists public.etapy(id uuid primary key default gen_random_uuid(), mieszkanie uuid, numer int, nazwa text, koniec date, skonczony boolean default false);
-create table if not exists public.platnosci(id uuid primary key default gen_random_uuid(), mieszkanie uuid, nazwa text, kwota numeric, zaplacona boolean default false);
-grant select, insert, update on public.dokumenty, public.poprawki, public.etapy, public.platnosci to authenticated;
-\i /var/lib/postgresql/k1213sql/13_powiadomienia.sql
-\pset tuples_only on
-set role authenticated;
+-- ===== Zdarzenia z prawdziwych tabel klocków 9 (terminy), 10 (platnosci), 11 (poprawki) =====
 set request.jwt.claim.sub to '33333333-3333-3333-3333-333333333333';
-insert into public.dokumenty(mieszkanie,rodzaj,sklep,kwota) values ('aaaaaaaa-0000-0000-0000-000000000001','paragon','Sklep Budowlany',540.5);
-insert into public.dokumenty(mieszkanie,rodzaj,sklep,kwota) values ('aaaaaaaa-0000-0000-0000-000000000001','faktura','Hurtownia',1200);
-insert into public.poprawki(id,mieszkanie,opis) values ('bbbbbbbb-0000-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000001','Puszka lampy krzywo');
-update public.poprawki set zrobiona=true where id='bbbbbbbb-0000-0000-0000-000000000001';
-insert into public.etapy(id,mieszkanie,numer,nazwa,koniec) values ('bbbbbbbb-0000-0000-0000-000000000002','aaaaaaaa-0000-0000-0000-000000000001',3,'Hydraulika','2030-01-10');
-update public.etapy set koniec='2030-01-20' where id='bbbbbbbb-0000-0000-0000-000000000002';
-update public.etapy set skonczony=true where id='bbbbbbbb-0000-0000-0000-000000000002';
-insert into public.platnosci(id,mieszkanie,nazwa,kwota) values ('bbbbbbbb-0000-0000-0000-000000000003','aaaaaaaa-0000-0000-0000-000000000001','Płatność 3',8000);
+update public.zdarzenia set przeczytane=true where not przeczytane;
 set request.jwt.claim.sub to '11111111-1111-1111-1111-111111111111';
-update public.platnosci set zaplacona=true where id='bbbbbbbb-0000-0000-0000-000000000003';
+insert into public.poprawki(id,mieszkanie,tresc) values ('bbbbbbbb-0000-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000001','Puszka lampy krzywo');
+update public.terminy set data_do='2030-01-10' where mieszkanie='aaaaaaaa-0000-0000-0000-000000000001' and nr=3;
+update public.terminy set data_do='2030-01-20' where mieszkanie='aaaaaaaa-0000-0000-0000-000000000001' and nr=3;
+insert into public.terminy(mieszkanie,nazwa) values ('aaaaaaaa-0000-0000-0000-000000000001','Odbiór kominiarski');
+update public.terminy set zrobiony=true where mieszkanie='aaaaaaaa-0000-0000-0000-000000000001' and nazwa='Odbiór kominiarski';
+update public.terminy set zrobiony=false where mieszkanie='aaaaaaaa-0000-0000-0000-000000000001' and nazwa='Odbiór kominiarski';
+update public.terminy set zrobiony=true where mieszkanie='aaaaaaaa-0000-0000-0000-000000000001' and nazwa='Odbiór kominiarski';
+select '' from public.zapisz_platnosci('aaaaaaaa-0000-0000-0000-000000000001', jsonb_build_array(jsonb_build_object('kwota', 8000,
+  'etapy', jsonb_build_array((select id from public.terminy where mieszkanie='aaaaaaaa-0000-0000-0000-000000000001' and nr=3)))));
+select pg_temp.spr(count(*)=1, 'płatność 1 ustalona (zapisz_platnosci)') from public.platnosci where mieszkanie='aaaaaaaa-0000-0000-0000-000000000001';
+update public.platnosci set zaplacona=true where mieszkanie='aaaaaaaa-0000-0000-0000-000000000001';
 insert into public.pliki(mieszkanie,folder,nazwa,sciezka,typ) values ('aaaaaaaa-0000-0000-0000-000000000001','paragony','drugi.jpg','11111111-1111-1111-1111-111111111111/aaaaaaaa-0000-0000-0000-000000000001/paragony/d.jpg','zdjecie');
-select pg_temp.spr(string_agg(tresc, ' | ' order by utworzono, tresc) =
-  'Nowy paragon: Sklep Budowlany 540,5 zł (Ekipa Testowa) | Nowa faktura: Hurtownia 1200 zł (Ekipa Testowa) | Nowa poprawka: Puszka lampy krzywo (Ekipa Testowa) | Poprawka zrobiona: Puszka lampy krzywo (Ekipa Testowa) | Opóźnienie: etap Hydraulika przesunięty z 10.01.2030 na 20.01.2030 | Etap skończony: 3. Hydraulika',
-  'właściciel: zdarzenia z tabel klocków 7, 9, 11 (paragon z pliku już nie dubluje): '||string_agg(tresc, ' | ' order by utworzono, tresc)) from public.zdarzenia where not przeczytane and rodzaj<>'opoznienie' or tresc like '%etap Hydraulika%';
 set request.jwt.claim.sub to '33333333-3333-3333-3333-333333333333';
-select pg_temp.spr(string_agg(rodzaj, ',' order by utworzono, rodzaj)='etap,platnosc', 'firma A: „Etap skończony” i „Płatność zapłacona” (bez faktury): '||string_agg(rodzaj||' '||tresc, ' | ' order by utworzono, rodzaj))
-  from public.zdarzenia where utworzono > (select max(utworzono) from public.zdarzenia where rodzaj='opoznienie') and rodzaj in ('etap','platnosc','faktura');
+insert into public.pliki(mieszkanie,wlasciciel,folder,nazwa,sciezka,typ,poprawka,poprawka_etap) values ('aaaaaaaa-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','poprawki','po.jpg','11111111-1111-1111-1111-111111111111/aaaaaaaa-0000-0000-0000-000000000001/poprawki/po.jpg','zdjecie','bbbbbbbb-0000-0000-0000-000000000001','po');
+update public.poprawki set zrobiona=true where id='bbbbbbbb-0000-0000-0000-000000000001';
+set request.jwt.claim.sub to '11111111-1111-1111-1111-111111111111';
+update public.poprawki set zatwierdzona=true where id='bbbbbbbb-0000-0000-0000-000000000001';
+select pg_temp.spr(string_agg(rodzaj||': '||tresc, ' | ' order by utworzono, tresc) =
+  'etap: Etap skończony: Odbiór kominiarski | poprawka: Poprawka zrobiona: Puszka lampy krzywo (Ekipa Testowa) – czeka na zatwierdzenie',
+  'właściciel: „Etap skończony” etapu dodanego (raz) i „Poprawka zrobiona” od firmy, bez zdjęcia poprawki z pliku: '||coalesce(string_agg(rodzaj||': '||tresc, ' | ' order by utworzono, tresc),'-')) from public.zdarzenia where not przeczytane;
+select pg_temp.spr(bool_and(cel='poprawki' and cel_id='bbbbbbbb-0000-0000-0000-000000000001'), 'zdarzenie poprawki otwiera Poprawki') from public.zdarzenia where rodzaj='poprawka';
+select pg_temp.spr(bool_and(cel='terminy'), 'zdarzenia etapów otwierają Terminy') from public.zdarzenia where rodzaj='etap';
+set request.jwt.claim.sub to '33333333-3333-3333-3333-333333333333';
+select pg_temp.spr(string_agg(rodzaj||': '||tresc, ' | ' order by utworzono, tresc) =
+  'poprawka: Nowa poprawka: Puszka lampy krzywo (Marek) | opoznienie: Opóźnienie: etap 3. Hydraulika przesunięty z 10.01.2030 na 20.01.2030 | etap: Etap skończony: Odbiór kominiarski | platnosc: Płatność zapłacona: płatność 1 – 8000,00 zł | paragon: Nowy paragon: drugi.jpg (Marek) | poprawka: Poprawka zatwierdzona: Puszka lampy krzywo (Marek)',
+  'firma A: poprawka, opóźnienie etapu, „Etap skończony”, „Płatność zapłacona”, paragon, zatwierdzenie: '||coalesce(string_agg(rodzaj||': '||tresc, ' | ' order by utworzono, tresc),'-')) from public.zdarzenia where not przeczytane;
+set request.jwt.claim.sub to '44444444-4444-4444-4444-444444444444';
+select pg_temp.spr(count(*)=0, 'firma B nie dostaje zdarzeń mieszkania firmy A') from public.zdarzenia where mieszkanie='aaaaaaaa-0000-0000-0000-000000000001';
 
 -- ===== Bez logowania (anon) nic =====
 reset role; set role anon;
