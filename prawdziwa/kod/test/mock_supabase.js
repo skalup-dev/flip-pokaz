@@ -66,6 +66,6 @@
       }
       return b;
     }
-    return { auth, from };
+    return { auth, from, rpc: async () => ({ data:[], error:null }) };
   } };
 })();

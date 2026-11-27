@@ -20,8 +20,8 @@ insert into public.prace(mieszkanie,pomieszczenie,etap,nazwa) values ('aaaaaaaa-
 insert into public.prace(mieszkanie,pomieszczenie,etap,nazwa) values ('aaaaaaaa-0000-0000-0000-000000000001','cccccccc-0000-0000-0000-000000000002',1,'X');
 -- przepisanie na inne mieszkanie (oczekiwany ERROR: brak uprawnień)
 update public.pomieszczenia set mieszkanie='aaaaaaaa-0000-0000-0000-000000000002';
-update public.prace set zrobiona=true;
-select 'pati zmienila zrobiona (1): '||count(*) from public.prace where zrobiona;
+update public.prace set zrobiona=true;  -- od klocka 5: bez zdjęcia odrzucone (ERROR)
+select 'pati zmienila zrobiona bez zdjecia (0): '||count(*) from public.prace where zrobiona;
 -- BRAT
 select set_config('request.jwt.claim.sub','22222222-2222-2222-2222-222222222222',false);
 insert into public.mieszkania(id,ulica) values ('bbbbbbbb-0000-0000-0000-000000000003','Brata 1');

@@ -46,6 +46,30 @@ h1{font-size:22px;margin:0 0 6px}h2{font-size:18px;margin:16px 0 8px}
 .logo{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .btn2{flex:none;white-space:nowrap}
 .stopka{text-align:center;font-size:13px;padding:18px 16px 24px}
+/* ---------- Lista prac ---------- */
+.bar{height:10px;border:1px solid var(--z);border-radius:999px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--c)}
+.card.dark .bar i{background:var(--z)}
+.got{font-size:14px;margin-top:6px}
+.dwa{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.dwa .btnBib{margin:0}
+.pr{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--z)}
+.pr:last-child{border-bottom:none}
+.box{flex:none;width:26px;height:26px;border:2px solid var(--c);border-radius:6px;background:transparent;font-weight:700;color:var(--z);line-height:20px;text-align:center;padding:0;cursor:pointer}
+.box.on{background:var(--c)}
+.pr .tx{flex:1}
+.pr .male{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.pr .male .btn2{padding:5px 10px;font-size:13px}
+.kto{display:block;font-size:12px;margin-top:2px}
+.room{display:block;width:100%;text-align:left;background:transparent;color:var(--c);cursor:pointer}
+.fotki{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:10px 0}
+.fotki figure{margin:0}
+.fotki .ramka{position:relative}
+.fotki img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;display:block;border:1px solid var(--z);cursor:pointer}
+.fotki .ramka .btn2{position:absolute;right:6px;bottom:6px;padding:3px 8px;font-size:12px;background:var(--k)}
+.fotki figcaption{font-size:12px;margin-top:4px}
+.info2{font-size:13px;margin:6px 0 0}
+@media (max-width:640px){.dwa{grid-template-columns:1fr}}
 /* ---------- Dodaj mieszkanie krokami ---------- */
 .kroki{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
 .kroki span{border:1px solid var(--c);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600}
@@ -255,8 +279,19 @@ async function wczytaj(msg){
   if (pr && !pr.error) S.profil = (pr.data && pr.data[0]) || null; pasek();
   if (error){ app.innerHTML = komunikat(blad(error)) + '<button class="btn" id="ponow">Spróbuj ponownie</button>'; $('#ponow').onclick = () => wczytaj(); return; }
   S.flats = (data || []).sort((a,b) => a.ulica.localeCompare(b.ulica, 'pl', {numeric:true}));
+  await wczytajStat();
   ekranListy(msg);
 }
+
+/* gotowość mieszkań: ile prac odznaczonych z ilu */
+async function wczytajStat(){
+  const { data, error } = await sb.from('prace').select('mieszkanie,zrobiona');
+  if (error){ S.stat = null; return; }
+  S.stat = {}; (data || []).forEach(x => { const t = S.stat[x.mieszkanie] || (S.stat[x.mieszkanie] = { a:0, d:0 }); t.a++; if (x.zrobiona) t.d++; });
+}
+const procent = (d, a) => a ? Math.round(d / a * 100) : 0;
+const pasekP = p => `<div class="bar"><i style="width:${p}%"></i></div>`;
+const gotowosc = fid => { const t = S.stat && S.stat[fid]; return t ? `${procent(t.d, t.a)}% (${t.d} z ${t.a} ${pl(t.a, 'pracy', 'prac', 'prac')})` : 'brak listy prac'; };
 
 const spozn = f => f.termin_konca && f.termin_konca < dzis();
 
@@ -267,7 +302,7 @@ function ekranListy(msg){
   const budzet = fl.reduce((s,f) => s + (Number(f.budzet) || 0), 0);
   const late = fl.filter(spozn).length;
   app.innerHTML = `<h1>Moje mieszkania</h1>
-    <p class="intro">${esc(kto())} ma tu wszystkie swoje mieszkania, zapisane na stałe. ${esc(kto())} klika mieszkanie, żeby zobaczyć szczegóły, albo dodaje nowe.</p>
+    <p class="intro">${esc(kto())} ma tu wszystkie swoje mieszkania. Przy każdym mieszkaniu widać gotowość: ile prac jest już odznaczonych jako zrobione. Po kliknięciu mieszkania otworzą się jego dane.</p>
     ${msg ? komunikat(msg, true) : ''}
     <div class="grid g3" style="margin-bottom:12px">
       <div class="card dark kpi"><small>Mieszkania</small><div id="kpiN">${fl.length}</div></div>
@@ -280,6 +315,7 @@ function ekranListy(msg){
         <b>${esc(f.ulica)}</b>${f.miasto ? `, ${esc(f.miasto)}` : ''}
         <div class="meta"><span>Metraż: ${m2(f.metraz)}</span><span>Budżet: ${zl(f.budzet)}</span>
         <span class="${spozn(f)?'late':''}">Termin końca: ${dt(f.termin_konca)}${spozn(f)?' – po terminie':''}</span></div>
+        ${S.stat ? (S.stat[f.id] ? `<div class="got"><b>Gotowość: ${procent(S.stat[f.id].d, S.stat[f.id].a)}%</b> (${S.stat[f.id].d} z ${S.stat[f.id].a} ${pl(S.stat[f.id].a, 'pracy', 'prac', 'prac')})</div>${pasekP(procent(S.stat[f.id].d, S.stat[f.id].a))}` : '<div class="got">Gotowość: brak listy prac</div>') : ''}
       </button>`).join('') : `<div class="card empty"><b>Nie ma jeszcze żadnego mieszkania.</b><br>Po kliknięciu „Dodaj mieszkanie” można dodać pierwsze.</div>`}</div>`;
   $('#dodaj').onclick = () => { S.kreator = null; ekranFormularza(); };
   app.querySelectorAll('.flat').forEach(b => b.onclick = () => ekranMieszkania(b.dataset.id));
@@ -288,23 +324,25 @@ function ekranListy(msg){
 function ekranMieszkania(id, msg){
   const f = S.flats.find(x => x.id === id); if (!f) return ekranListy();
   app.innerHTML = `<button class="btnT" id="wroc">← Moje mieszkania</button>
-    <h1>${esc(f.ulica)}</h1><p class="intro">Dane mieszkania. Po kliknięciu „Biblioteka” ${esc(kto())} wgrywa albo ogląda zdjęcia i pliki PDF tego mieszkania. ${esc(kto())} może też zmienić dane albo usunąć mieszkanie.</p>
+    <h1>${esc(f.ulica)}</h1><p class="intro">Dane mieszkania. „Lista prac” pokazuje, co jest do zrobienia i co już zrobione. „Biblioteka” to zdjęcia i pliki PDF mieszkania. ${esc(kto())} może też zmienić dane albo usunąć mieszkanie.</p>
     ${msg ? komunikat(msg, true) : ''}
-    <button class="btn full btnBib" id="biblioteka">Biblioteka – zdjęcia i pliki PDF</button>
+    <div class="dwa"><button class="btn btnBib" id="listaPrac">Lista prac${S.stat && S.stat[f.id] ? ` – ${S.stat[f.id].d} z ${S.stat[f.id].a} (${procent(S.stat[f.id].d, S.stat[f.id].a)}%)` : ''}</button><button class="btn btnBib" id="biblioteka">Biblioteka – zdjęcia i pliki PDF</button></div>
     <div class="card">
       <div class="row"><span>Ulica i numer</span><b>${esc(f.ulica)}</b></div>
       <div class="row"><span>Miasto</span><b>${esc(f.miasto) || '–'}</b></div>
       <div class="row"><span>Firma remontowa</span><b>${esc(f.firma_remontowa) || '–'}</b></div>
+      ${S.stat ? `<div class="row"><span>Gotowość</span><b>${gotowosc(f.id)}</b></div>` : ''}
       <div class="row"><span>Metraż</span><b>${m2(f.metraz)}</b></div>
       <div class="row"><span>Budżet remontu</span><b>${zl(f.budzet)}</b></div>
       <div class="row"><span>Data startu remontu</span><b>${dt(f.data_startu)}</b></div>
       <div class="row"><span>Termin końca</span><b class="${spozn(f)?'late':''}">${dt(f.termin_konca)}</b></div>
       ${f.opis ? `<div class="row"><span>Opis</span><b style="white-space:pre-wrap;text-align:right">${esc(f.opis)}</b></div>` : ''}
     </div>
-    <div class="card"><b>Co będzie dalej</b><br>W kolejnych krokach dojdą tu: ${f.firma_remontowa && f.firma_remontowa.trim() ? 'Chat z firmą ' + esc(f.firma_remontowa.trim()) : 'Chat z firmą remontową'}, Lista prac, Płatności i Terminy.</div>
+    <div class="card"><b>Co będzie dalej</b><br>W kolejnych krokach dojdą tu: ${f.firma_remontowa && f.firma_remontowa.trim() ? 'Chat z firmą ' + esc(f.firma_remontowa.trim()) : 'Chat z firmą remontową'}, Płatności i Terminy.</div>
     <div class="acts"><button class="btn" id="zmien">Zmień dane</button><button class="btn2" id="usun">Usuń mieszkanie</button></div>`;
   $('#wroc').onclick = () => ekranListy();
   $('#biblioteka').onclick = () => ekranBiblioteki(f.id);
+  $('#listaPrac').onclick = () => ekranListaPrac(f.id);
   $('#zmien').onclick = () => ekranFormularza(f);
   $('#usun').onclick = () => ekranUsun(f);
 }
@@ -515,7 +553,164 @@ function ekranKrok4(fid, msg){
       }
     }
     S.kreator = null; S.wyjscieZDanych = null;
+    if (S.stat && prace.length) S.stat[fid] = { a:prace.length, d:0 };
     ekranMieszkania(fid, pom.length ? `Lista prac zapisana: ${ilePrac(prace.length)} ${wPom(pom.length)}.` : `Mieszkanie ${f.ulica} dodane bez pomieszczeń i prac.`);
+  };
+}
+
+/* ---------- Lista prac (klocek 5) ---------- */
+const dataPL = t => t ? new Date(t).toLocaleDateString('pl-PL', { day:'2-digit', month:'2-digit', year:'numeric' }) : '';
+async function nazwyKto(ids){
+  const u = [...new Set(ids.filter(Boolean))]; const m = {};
+  if (u.length){ const { data } = await sb.rpc('kto_nazwy', { ids:u }); (data || []).forEach(x => m[x.id] = x.nazwa); }
+  u.forEach(id => { if (!m[id]) m[id] = id === S.user.id ? kto() : 'Właściciel aplikacji'; });
+  return m;
+}
+async function wczytajPrace(fid){
+  const [p1, p2, p3] = await Promise.all([
+    sb.from('pomieszczenia').select('id,nazwa,rodzaj').eq('mieszkanie', fid),
+    sb.from('prace').select('*').eq('mieszkanie', fid),
+    sb.from('pliki').select('id,praca,sciezka,nazwa,dodal,utworzono').eq('mieszkanie', fid).eq('folder', 'postepy') ]);
+  const blad1 = p1.error || p2.error || p3.error;
+  const pom = (p1.data || []).sort(poNazwie), prace = p2.data || [], zdj = (p3.data || []).filter(z => z.praca);
+  const t = S.stat || (S.stat = {}); if (prace.length) t[fid] = { a:prace.length, d:prace.filter(x => x.zrobiona).length }; else delete t[fid];
+  return { blad:blad1, pom, prace, zdj };
+}
+const ileZdjec = (zdj, id) => zdj.filter(z => z.praca === id).length;
+
+async function ekranListaPrac(fid, msg){
+  const f = mieszkanie(fid); if (!f) return ekranListy();
+  app.innerHTML = '<p>Wczytuję listę prac…</p>';
+  const L = await wczytajPrace(fid);
+  const d = L.prace.filter(x => x.zrobiona).length, a = L.prace.length;
+  app.innerHTML = `<button class="btnT" id="wroc">← ${esc(f.ulica)}</button>
+    <h1>Lista prac – ${esc(f.ulica)}</h1>
+    <p class="intro">Tu są wszystkie prace mieszkania, po pomieszczeniach od A do Z. „5 z 19” znaczy: 5 prac zrobionych z 19. Po kliknięciu pomieszczenia otworzą się jego prace.</p>
+    ${L.blad ? komunikat(/prace|pomieszczenia|zrobiona|praca/i.test(L.blad.message || '') && /find|exist|column/i.test(L.blad.message || '') ? 'Lista prac nie jest jeszcze włączona w bazie danych. Trzeba wgrać plik 05_lista_prac.sql w Supabase.' : blad(L.blad)) : ''}${msg ? komunikat(msg, true) : ''}
+    ${a ? `<div class="card dark"><div class="zw"><b>Razem</b><b id="razemP">${d} z ${a} ${pl(a, 'pracy', 'prac', 'prac')} · ${procent(d, a)}%</b></div>${pasekP(procent(d, a))}</div>
+      ${L.pom.map(r => { const w = L.prace.filter(x => x.pomieszczenie === r.id), z = w.filter(x => x.zrobiona).length;
+        return `<button class="card room" data-pom="${r.id}"><div class="zw"><b>${esc(r.nazwa)}</b><span>${z} z ${w.length} ›</span></div>${pasekP(procent(z, w.length))}</button>`; }).join('')}`
+    : `<div class="card empty"><b>To mieszkanie nie ma jeszcze listy prac.</b><br>Lista prac powstaje w krokach 3 i 4 przy dodawaniu mieszkania (pomieszczenia i prace z kratek).</div>`}`;
+  $('#wroc').onclick = () => ekranMieszkania(fid);
+  app.querySelectorAll('[data-pom]').forEach(b => b.onclick = () => ekranPomieszczenia(fid, b.dataset.pom));
+}
+
+async function ekranPomieszczenia(fid, pid, msg){
+  const f = mieszkanie(fid); if (!f) return ekranListy();
+  app.innerHTML = '<p>Wczytuję prace…</p>';
+  const L = await wczytajPrace(fid);
+  const r = L.pom.find(x => x.id === pid); if (!r) return ekranListaPrac(fid);
+  const w = L.prace.filter(x => x.pomieszczenie === pid), todo = w.filter(x => !x.zrobiona), dn = w.filter(x => x.zrobiona);
+  const kto2 = await nazwyKto(dn.map(x => x.zrobiona_przez));
+  const grupy = (lista, wiersz) => ETAPY.map((e, i) => { const g = lista.filter(x => x.etap === i + 1).sort(poNazwie); return g.length ? `<div class="etap">${i + 1}. ${e}</div>` + g.map(wiersz).join('') : ''; }).join('');
+  app.innerHTML = `<button class="btnT" id="wroc">← Wszystkie pomieszczenia</button>
+    <h1>${esc(r.nazwa)} · ${dn.length} z ${w.length}</h1>
+    <p class="intro">Na górze prace do zrobienia, na dole zrobione, w 7 etapach remontu. Kto skończy pracę, klika kwadracik i dodaje zdjęcie – bez zdjęcia praca się nie odznaczy. Przy zrobionej pracy widać, kto ją odznaczył i kiedy. „Odznacz” cofa pomyłkę: praca wraca do „Do zrobienia”.</p>
+    ${msg ? komunikat(msg, true) : ''}${pasekP(procent(dn.length, w.length))}
+    <div class="card" style="margin-top:12px" id="doZrobienia"><b>Do zrobienia (${todo.length})</b>
+      ${todo.length ? grupy(todo, x => `<div class="pr" data-praca="${x.id}"><button class="box" data-zrob="${x.id}" aria-label="Odznacz jako zrobioną: ${esc(x.nazwa)}"></button><div class="tx">${esc(x.nazwa)}</div></div>`) : '<p style="margin:6px 0">Wszystko zrobione.</p>'}</div>
+    <div class="card" id="zrobione"><b>Zrobione (${dn.length})</b>
+      ${dn.length ? grupy(dn, x => `<div class="pr" data-praca="${x.id}"><span class="box on" aria-hidden="true">✓</span><div class="tx">${esc(x.nazwa)}<span class="kto">Odznaczone przez: ${esc(kto2[x.zrobiona_przez] || 'Właściciel aplikacji')} · ${dataPL(x.zrobiona_kiedy)}</span>
+        <div class="male"><button class="btn2" data-zdjecia="${x.id}">📷 Zobacz zdjęcia (${ileZdjec(L.zdj, x.id)})</button><button class="btn2" data-cofnij="${x.id}">Odznacz</button></div></div></div>`) : '<p style="margin:6px 0">Jeszcze nic.</p>'}</div>`;
+  $('#wroc').onclick = () => ekranListaPrac(fid);
+  app.querySelectorAll('[data-zrob]').forEach(b => b.onclick = () => ekranOdznaczenia(fid, pid, b.dataset.zrob));
+  app.querySelectorAll('[data-zdjecia]').forEach(b => b.onclick = () => ekranZdjecPracy(fid, pid, b.dataset.zdjecia));
+  app.querySelectorAll('[data-cofnij]').forEach(b => b.onclick = async () => {
+    b.disabled = true; const x = w.find(y => y.id === b.dataset.cofnij);
+    const { error } = await sb.from('prace').update({ zrobiona:false }).eq('id', x.id);
+    ekranPomieszczenia(fid, pid, error ? blad(error) : `Odznaczono: „${x.nazwa}” wraca do „Do zrobienia”. Zdjęcia zostają w Bibliotece › Postępy prac.`);
+  });
+}
+
+async function wgrajZdjeciePracy(fid, prId, blob, nazwa){
+  const sciezka = `${S.user.id}/${fid}/postepy/${crypto.randomUUID()}.jpg`;
+  const up = await sb.storage.from(SCHOWEK).upload(sciezka, blob, { contentType:'image/jpeg', upsert:false });
+  if (up.error) return bladPliku(up.error);
+  const { error } = await sb.from('pliki').insert({ mieszkanie:fid, folder:'postepy', nazwa, sciezka, typ:'zdjecie', rozmiar:blob.size, praca:prId });
+  if (error){ await sb.storage.from(SCHOWEK).remove([sciezka]); return bladPliku(error); }
+  return null;
+}
+async function przygotujZdjecia(files){
+  const ok = [], bledy = [];
+  for (const file of files){
+    const nazwa = (file.name || 'zdjecie').replace(/\.[^.]+$/, '') + '.jpg';
+    if (!(file.type.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name))){ bledy.push(`${file.name}: to nie jest zdjęcie.`); continue; }
+    try { const blob = await zmniejsz(file); ok.push({ blob, nazwa, url:URL.createObjectURL(blob) }); }
+    catch(e){ bledy.push(`${file.name}: nie da się odczytać tego zdjęcia. Trzeba zapisać je jako JPG i spróbować jeszcze raz.`); }
+  }
+  return { ok, bledy };
+}
+
+async function ekranOdznaczenia(fid, pid, prId, msg){
+  const f = mieszkanie(fid); if (!f) return ekranListy();
+  if (!S.noweZdj || S.noweZdj.praca !== prId) S.noweZdj = { praca:prId, lista:[] };
+  app.innerHTML = '<p>Wczytuję…</p>';
+  const L = await wczytajPrace(fid);
+  const x = L.prace.find(y => y.id === prId), r = L.pom.find(y => y.id === pid);
+  if (!x || !r) return ekranPomieszczenia(fid, pid);
+  if (x.zrobiona){ S.noweZdj = null; return ekranPomieszczenia(fid, pid, `„${x.nazwa}” jest już zrobiona.`); }
+  const stare = L.zdj.filter(z => z.praca === prId), nowe = S.noweZdj.lista;
+  let linki = {}; if (stare.length){ const { data:u } = await sb.storage.from(SCHOWEK).createSignedUrls(stare.map(z => z.sciezka), 3600); (u || []).forEach(z => { if (z.signedUrl) linki[z.path] = z.signedUrl; }); }
+  const kto2 = await nazwyKto(stare.map(z => z.dodal));
+  const ile = stare.length + nowe.length;
+  app.innerHTML = `<button class="btnT" id="wroc">← ${esc(r.nazwa)}</button>
+    <h1>Odznaczenie pracy</h1>
+    <p class="intro"><b>${esc(r.nazwa)} · ${esc(x.nazwa)}.</b> ${esc(kto())} robi zdjęcie skończonej pracy albo wybiera je z galerii. Potrzebne jest co najmniej jedno zdjęcie, można dodać kilka. Po kliknięciu „Zapisz jako zrobioną” praca przejdzie do „Zrobione” z podpisem „Odznaczone przez: ${esc(kto())}” i dzisiejszą datą. Zdjęcia trafią też do Biblioteki › Postępy prac.</p>
+    ${msg ? komunikat(msg) : ''}
+    <div class="dwa"><label class="btn wgraj" for="aparat" id="lAparat">📷 Zrób zdjęcie</label><label class="btn2 wgraj" for="galeria" id="lGaleria">Wybierz z galerii</label></div>
+    <input type="file" id="aparat" class="hide" accept="image/*" capture="environment"><input type="file" id="galeria" class="hide" accept="image/*" multiple>
+    <div class="card"><b>Dodane zdjęcia (${ile})</b>
+      ${ile ? `<div class="fotki">${stare.map(z => `<figure><div class="ramka"><img src="${esc(linki[z.sciezka] || '')}" alt="${esc(z.nazwa)}"></div><figcaption>Zdjęcie dodane przez: ${esc(kto2[z.dodal] || 'Właściciel aplikacji')} · ${dataPL(z.utworzono)}</figcaption></figure>`).join('')}
+        ${nowe.map((z, i) => `<figure><div class="ramka"><img src="${z.url}" alt="${esc(z.nazwa)}"><button class="btn2" data-usunz="${i}">Usuń</button></div><figcaption>Zdjęcie dodane przez: ${esc(kto())} · ${dataPL(new Date())}</figcaption></figure>`).join('')}</div>`
+      : '<p class="info2">Nie ma jeszcze zdjęć. Bez zdjęcia przycisk „Zapisz jako zrobioną” pokaże komunikat: „Najpierw trzeba dodać co najmniej jedno zdjęcie”.</p>'}</div>
+    <div class="acts"><button class="btn2" id="anuluj">Anuluj</button><button class="btn" id="zapiszZrob">Zapisz jako zrobioną</button></div>`;
+  const wroc = () => { S.noweZdj = null; ekranPomieszczenia(fid, pid); };
+  $('#wroc').onclick = wroc; $('#anuluj').onclick = wroc;
+  const dodaj = async e => { const { ok, bledy } = await przygotujZdjecia([...e.target.files]); S.noweZdj.lista.push(...ok); ekranOdznaczenia(fid, pid, prId, bledy.length ? 'Nie dodano: ' + bledy.join(' ') : null); };
+  $('#aparat').onchange = dodaj; $('#galeria').onchange = dodaj;
+  app.querySelectorAll('[data-usunz]').forEach(b => b.onclick = () => { const [z] = S.noweZdj.lista.splice(+b.dataset.usunz, 1); URL.revokeObjectURL(z.url); ekranOdznaczenia(fid, pid, prId); });
+  $('#zapiszZrob').onclick = async () => {
+    if (!ile) return ekranOdznaczenia(fid, pid, prId, 'Najpierw trzeba dodać co najmniej jedno zdjęcie.');
+    const btn = $('#zapiszZrob'); btn.disabled = true; btn.classList.add('load');
+    for (let i = 0; i < nowe.length; i++){
+      btn.textContent = `Wgrywam zdjęcie ${i + 1} z ${nowe.length}…`;
+      const err = await wgrajZdjeciePracy(fid, prId, nowe[i].blob, nowe[i].nazwa);
+      if (err){ S.noweZdj.lista = nowe.slice(i); return ekranOdznaczenia(fid, pid, prId, 'Nie udało się wgrać zdjęcia: ' + err); }
+    }
+    S.noweZdj = null;
+    const { error } = await sb.from('prace').update({ zrobiona:true }).eq('id', prId);
+    if (error) return ekranOdznaczenia(fid, pid, prId, /co najmniej jedno zdjęcie/i.test(error.message || '') ? 'Najpierw trzeba dodać co najmniej jedno zdjęcie.' : blad(error));
+    ekranPomieszczenia(fid, pid, `Praca „${x.nazwa}” jest zrobiona. Odznaczone przez: ${kto()} · ${dataPL(new Date())}.`);
+  };
+}
+
+async function ekranZdjecPracy(fid, pid, prId, msg, info = true){
+  const f = mieszkanie(fid); if (!f) return ekranListy();
+  app.innerHTML = '<p>Wczytuję zdjęcia…</p>';
+  const L = await wczytajPrace(fid);
+  const x = L.prace.find(y => y.id === prId), r = L.pom.find(y => y.id === pid); if (!x || !r) return ekranPomieszczenia(fid, pid);
+  const zdj = L.zdj.filter(z => z.praca === prId).sort((a, b) => a.utworzono.localeCompare(b.utworzono));
+  let linki = {}; if (zdj.length){ const { data:u } = await sb.storage.from(SCHOWEK).createSignedUrls(zdj.map(z => z.sciezka), 3600); (u || []).forEach(z => { if (z.signedUrl) linki[z.path] = z.signedUrl; }); }
+  const kto2 = await nazwyKto([x.zrobiona_przez, ...zdj.map(z => z.dodal)]);
+  const podpis = z => `Zdjęcie dodane przez: ${kto2[z.dodal] || 'Właściciel aplikacji'} · ${dataPL(z.utworzono)}`;
+  app.innerHTML = `<button class="btnT" id="wroc">← ${esc(r.nazwa)}</button>
+    <h1>Zdjęcia pracy</h1>
+    <p class="intro"><b>${esc(r.nazwa)} · ${esc(x.nazwa)}</b>${x.zrobiona ? `<span class="kto" style="font-size:14px">Odznaczone przez: ${esc(kto2[x.zrobiona_przez] || 'Właściciel aplikacji')} · ${dataPL(x.zrobiona_kiedy)} · zdjęć: ${zdj.length}</span>` : `<span class="kto" style="font-size:14px">Praca do zrobienia · zdjęć: ${zdj.length}</span>`}Pod każdym zdjęciem widać, kto je dodał i kiedy. Po kliknięciu zdjęcia otworzy się jego powiększenie. „+ Dodaj zdjęcie” dokłada kolejne zdjęcie – trafi ono też do Biblioteki › Postępy prac.</p>
+    ${msg ? komunikat(msg, info) : ''}
+    <div class="fotki">${zdj.map((z, i) => `<figure><img src="${esc(linki[z.sciezka] || '')}" alt="${esc(z.nazwa)}" data-pow="${i}"><figcaption>${esc(podpis(z))}</figcaption></figure>`).join('')}</div>
+    <div class="acts"><label class="btn2 wgraj" for="dodajZdj" id="lDodaj">+ Dodaj zdjęcie</label><button class="btn" id="wrocPom">Wróć do: ${esc(r.nazwa)}</button></div>
+    <input type="file" id="dodajZdj" class="hide" accept="image/*" multiple>`;
+  $('#wroc').onclick = () => ekranPomieszczenia(fid, pid); $('#wrocPom').onclick = () => ekranPomieszczenia(fid, pid);
+  app.querySelectorAll('[data-pow]').forEach(im => im.onclick = () => {
+    const i = +im.dataset.pow, z = zdj[i];
+    podglad({ nazwa:`Powiększenie zdjęcia ${i + 1} z ${zdj.length} · ${x.nazwa}`, sciezka:z.sciezka, typ:'zdjecie' }, linki);
+    const info2 = $('#okno .info'); if (info2) info2.textContent = podpis(z) + '. Na telefonie zdjęcie można dodatkowo przybliżyć palcami. „Zamknij” wraca do zdjęć pracy.';
+  });
+  $('#dodajZdj').onchange = async e => {
+    const { ok, bledy } = await przygotujZdjecia([...e.target.files]); let n = 0;
+    $('#lDodaj').textContent = 'Wgrywam…'; $('#lDodaj').classList.add('load');
+    for (const z of ok){ const err = await wgrajZdjeciePracy(fid, prId, z.blob, z.nazwa); if (err) bledy.push(z.nazwa + ': ' + err); else n++; URL.revokeObjectURL(z.url); }
+    ekranZdjecPracy(fid, pid, prId, (n ? `Dodano: ${n} ${pl(n, 'zdjęcie', 'zdjęcia', 'zdjęć')}.` : '') + (bledy.length ? ' Nie dodano: ' + bledy.join(' ') : ''), !bledy.length);
   };
 }
 
@@ -735,6 +930,12 @@ function ekranUsunPlik(fid, lk, p, msg){
   $('#nie').onclick = () => ekranFolderu(fid, lk);
   $('#tak').onclick = async () => {
     $('#tak').disabled = true;
+    if (p.praca){
+      const { error } = await sb.from('pliki').delete().eq('id', p.id);
+      if (error) return ekranUsunPlik(fid, lk, p, /ostatnie zdjęcie/i.test(error.message || '') ? 'To ostatnie zdjęcie zrobionej pracy. Najpierw trzeba ją odznaczyć w „Lista prac”, dopiero potem można usunąć zdjęcie.' : bladPliku(error));
+      await sb.storage.from(SCHOWEK).remove([p.sciezka]);
+      return ekranFolderu(fid, lk, 'Plik ' + p.nazwa + ' został usunięty.');
+    }
     const r = await sb.storage.from(SCHOWEK).remove([p.sciezka]);
     if (r.error) return ekranUsunPlik(fid, lk, p, bladPliku(r.error));
     const { error } = await sb.from('pliki').delete().eq('id', p.id);
