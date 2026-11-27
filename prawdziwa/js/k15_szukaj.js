@@ -65,21 +65,10 @@
   }
   HAKI.poWczytaniu.push(wczytajSkrot);
 
-  // Folder „Nowe mieszkania” na liście „Moje zlecenia” (konto firmy) i napis „Szuka ekipy” na liście mieszkań
-  function dopiszDoListy(){
-    const h = app.querySelector('h1'); if (!h || !S.user) return;
-    if (jestFirma() && h.textContent === 'Moje zlecenia' && !$('#szNowe')){
-      const b = document.createElement('button'); b.className = 'card fold'; b.id = 'szNowe';
-      b.innerHTML = `<span class="ik"></span><span class="tx"><b>Nowe mieszkania</b><small>${S.noweIle == null ? 'Zlecenia od Właścicieli aplikacji' : 'Zlecenia do wzięcia: ' + S.noweIle} · widać miejscowość, plan, opis i cenę</small></span><span class="str">›</span>`;
-      b.onclick = () => ekranNowe();
-      const l = $('#lista'); l ? l.parentNode.insertBefore(b, l) : app.appendChild(b);
-    }
-    if (!jestFirma() && h.textContent === 'Moje mieszkania' && S.szukaj) app.querySelectorAll('.flat[data-id]').forEach(c => {
-      const z = S.szukaj[c.dataset.id]; if (!z || !z.wystawione || c.querySelector('.sz-szuka')) return;
-      const d = document.createElement('div'); d.className = 'got sz-szuka'; d.innerHTML = `<b>Szuka ekipy</b> · ${firmyTxt(z.n)}`; c.appendChild(d);
-    });
-  }
-  new MutationObserver(dopiszDoListy).observe(app, { childList:true });
+  // Folder „Nowe mieszkania” na liście „Moje zlecenia” (konto firmy) i napis „Szuka ekipy” na karcie mieszkania – przez haki rdzenia
+  HAKI.listaFirmy.push(() => `<button class="card fold" id="szNowe"><span class="ik"></span><span class="tx"><b>Nowe mieszkania</b><small>${S.noweIle == null ? 'Zlecenia od Właścicieli aplikacji' : 'Zlecenia do wzięcia: ' + S.noweIle} · widać miejscowość, plan, opis i cenę</small></span><span class="str">›</span></button>`);
+  HAKI.poLiscie.push(() => { const b = $('#szNowe'); if (b) b.onclick = () => ekranNowe(); });
+  HAKI.kartaMieszkania.push(f => { const z = !jestFirma() && S.szukaj && S.szukaj[f.id]; return z && z.wystawione ? `<div class="got sz-szuka"><b>Szuka ekipy</b> · ${firmyTxt(z.n)}</div>` : ''; });
 
   /* ---------- Właściciel aplikacji: Szukaj ekipy ---------- */
   async function ekranSzukaj(fid, msg, info = true){

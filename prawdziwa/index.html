@@ -177,7 +177,10 @@ const wlascicielId = fid => { const f = S.flats && S.flats.find(x => x.id === fi
    rejestrujModul({ k:'klucz', n:'Nazwa przycisku', ekran:fid => ..., firma:true|false, wlasciciel:true|false,
                     etykieta:fid => 'tekst przycisku' (opcjonalnie), dalej:'nazwa w „Co będzie dalej”' (opcjonalnie) })
    HAKI.poWczytaniu: funkcje async wywoływane po wczytaniu mieszkań (np. dzwonek). HAKI.pasek: funkcje po odświeżeniu paska. */
-const MODULY = [], HAKI = { poWczytaniu:[], pasek:[] };
+const MODULY = [], HAKI = { poWczytaniu:[], pasek:[], listaFirmy:[], kartaMieszkania:[], poLiscie:[] };
+/* HAKI.listaFirmy: () => HTML nad listą „Moje zlecenia” (konto firmy); HAKI.kartaMieszkania: f => HTML dopisany do karty mieszkania;
+   HAKI.poLiscie: () => po narysowaniu listy (podpięcie kliknięć); moduł może mieć widoczny: f => true|false */
+const zHakow = (lista, ...a) => lista.map(h => { try { return h(...a) || ''; } catch(e){ return ''; } }).join('');
 function rejestrujModul(m){ if (!MODULY.some(x => x.k === m.k)) MODULY.push(m); }
 let sb = null;
 
@@ -334,7 +337,7 @@ function ekranListy(msg){
     <div class="grid g2" style="margin-bottom:12px">
       <div class="card dark kpi"><small>Mieszkania</small><div id="kpiN">${fl.length}</div></div>
       <div class="card dark kpi"><small>Po terminie</small><div id="kpiL">${late}</div></div>
-    </div>` : `<h1>Moje mieszkania</h1>
+    </div>${zHakow(HAKI.listaFirmy)}` : `<h1>Moje mieszkania</h1>
     <p class="intro">${esc(kto())} ma tu wszystkie swoje mieszkania. Przy każdym mieszkaniu widać gotowość: ile prac jest już odznaczonych jako zrobione. Po kliknięciu mieszkania otworzą się jego dane.</p>
     ${msg ? komunikat(msg, true) : ''}
     <div class="grid g3" style="margin-bottom:12px">
@@ -348,9 +351,10 @@ function ekranListy(msg){
         <b>${esc(f.ulica)}</b>${f.miasto ? `, ${esc(f.miasto)}` : ''}
         <div class="meta"><span>Metraż: ${m2(f.metraz)}</span>${F ? '' : `<span>Budżet: ${zl(f.budzet)}</span>`}
         <span class="${spozn(f)?'late':''}">Termin końca: ${dt(f.termin_konca)}${spozn(f)?' – po terminie':''}</span></div>
-        ${S.stat ? (S.stat[f.id] ? `<div class="got"><b>Gotowość: ${procent(S.stat[f.id].d, S.stat[f.id].a)}%</b> (${S.stat[f.id].d} z ${S.stat[f.id].a} ${pl(S.stat[f.id].a, 'pracy', 'prac', 'prac')})</div>${pasekP(procent(S.stat[f.id].d, S.stat[f.id].a))}` : '<div class="got">Gotowość: brak listy prac</div>') : ''}
+        ${zHakow(HAKI.kartaMieszkania, f)}${S.stat ? (S.stat[f.id] ? `<div class="got"><b>Gotowość: ${procent(S.stat[f.id].d, S.stat[f.id].a)}%</b> (${S.stat[f.id].d} z ${S.stat[f.id].a} ${pl(S.stat[f.id].a, 'pracy', 'prac', 'prac')})</div>${pasekP(procent(S.stat[f.id].d, S.stat[f.id].a))}` : '<div class="got">Gotowość: brak listy prac</div>') : ''}
       </button>`).join('') : F ? `<div class="card empty"><b>Nie ma jeszcze żadnego zlecenia.</b><br>Mieszkanie pojawi się tutaj, gdy Właściciel aplikacji wyśle link zaproszenia i ${esc(kto())} go otworzy.</div>` : `<div class="card empty"><b>Nie ma jeszcze żadnego mieszkania.</b><br>Po kliknięciu „Dodaj mieszkanie” można dodać pierwsze.</div>`}</div>`;
   if (!F) $('#dodaj').onclick = () => { S.kreator = null; ekranFormularza(); };
+  HAKI.poLiscie.forEach(h => { try { h(); } catch(e){} });
   app.querySelectorAll('.flat').forEach(b => b.onclick = () => ekranMieszkania(b.dataset.id));
 }
 
@@ -359,7 +363,7 @@ function przyciskiModulow(f){
   const lista = [
     { k:'biblioteka', n:'Biblioteka', etykieta:() => 'Biblioteka – zdjęcia i pliki PDF', firma:true, ekran:fid => ekranBiblioteki(fid) },
     { k:'listaPrac', n:'Lista prac', etykieta:fid => 'Lista prac' + (S.stat && S.stat[fid] ? ` – ${S.stat[fid].d} z ${S.stat[fid].a} (${procent(S.stat[fid].d, S.stat[fid].a)}%)` : ''), firma:true, ekran:fid => ekranListaPrac(fid) },
-    ...MODULY ].filter(m => F ? m.firma : m.wlasciciel !== false).sort((a, b) => a.n.localeCompare(b.n, 'pl'));
+    ...MODULY ].filter(m => (F ? m.firma : m.wlasciciel !== false) && (!m.widoczny || m.widoczny(f))).sort((a, b) => a.n.localeCompare(b.n, 'pl'));
   return lista;
 }
 

@@ -22,7 +22,7 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 | 12 Chat z firmą + Chat ogólny | w budowie (pomocnik D, razem z 13) |
 | 13 Powiadomienia (dzwonek) | w budowie (pomocnik D) |
 | 14 Ilości z planu | w budowie (pomocnik C) |
-| 15 Szukaj ekipy | w budowie (pomocnik E) |
+| 15 Szukaj ekipy | zbudowany (js/k15_szukaj.js, sql/15_szukaj.sql), testy: baza 29 OK, ekrany 80 OK; w rdzeniu haki listaFirmy/kartaMieszkania/poLiscie i pole widoczny |
 
 ## Założenia przyjęte bez pytania (do potwierdzenia przez Pati)
 1. Zaproszenie szefa firmy: link do skopiowania (bez SMS). Szef firmy zakłada zwykłe konto i otwiera link – konto staje się kontem firmy.
@@ -33,6 +33,7 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 (uzupełniane przy klockach 6, 7, 13)
 
 ## Dziennik
+- 28.11 – klocek 15 dołączony; rdzeń: HAKI.listaFirmy, HAKI.kartaMieszkania, HAKI.poLiscie, moduł.widoczny(f).
 - 27.11 – dopisek Pati do klocka 7 (odczyt paragonu za 0 zł: Tesseract.js, reguły, tekst_surowy/zrodlo_odczytu/pewnosc/pola_niepewne) przekazany pomocnikowi A.
 - 27.11 23:40 – klocek 6 gotowy (commit 604d77f), pola pieniędzy mieszkania w 06. Klocki 7–15 zlecone 5 pomocnikom (osobne kopie repo); każdy oddaje js/kNN_*.js + sql/NN_*.sql + testy. Potem: złożenie, 06_reszta.sql, testy na prawdziwej bazie, obrazy.
 - 27.11 23:15 – plan, POSTEP.md.
