@@ -253,7 +253,7 @@ begin
     perform public.powiadom_mieszkanie(m, case when f then 'faktura' else 'paragon' end,
       case when f then 'Nowa faktura: ' else 'Nowy paragon: ' end || opis || coalesce(' ' || replace(kw, '.', ',') || ' zł', '')
         || ' (' || public.nazwa_konta(auth.uid()) || ')',
-      'paragony', null, not f);
+      'paragony', null, not f and coalesce(j->>'zaplacil', 'firma') <> 'wlasciciel');   -- firma nie widzi paragonów zapłaconych przez Właściciela aplikacji
   exception when others then raise warning 'Powiadomienie o dokumencie nie powstało: %', sqlerrm;
   end;
   return new;

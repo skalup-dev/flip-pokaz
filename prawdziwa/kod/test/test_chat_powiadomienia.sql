@@ -110,7 +110,9 @@ do $$ begin update public.prace set zrobiona=true where id='eeeeeeee-0000-0000-0
   raise notice 'ZLE  praca bez zdjęcia odznaczona'; exception when others then raise notice 'OK   praca bez zdjęcia nie odznacza się i nie daje zdarzenia (%)', sqlerrm; end $$;
 insert into public.pliki(mieszkanie,wlasciciel,folder,nazwa,sciezka,typ,praca) values ('aaaaaaaa-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','postepy','panele.jpg','11111111-1111-1111-1111-111111111111/aaaaaaaa-0000-0000-0000-000000000001/postepy/p1.jpg','zdjecie','eeeeeeee-0000-0000-0000-000000000001');
 update public.prace set zrobiona=true where id='eeeeeeee-0000-0000-0000-000000000001';
-insert into public.pliki(mieszkanie,wlasciciel,folder,nazwa,sciezka,typ) values ('aaaaaaaa-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','paragony','obi.jpg','11111111-1111-1111-1111-111111111111/aaaaaaaa-0000-0000-0000-000000000001/paragony/o1.jpg','zdjecie');
+-- paragon jak w aplikacji: zdjęcie w Bibliotece › Paragony + wiersz w tabeli paragony (klocek 7)
+insert into public.pliki(id,mieszkanie,wlasciciel,folder,nazwa,sciezka,typ) values ('ffffffff-0000-0000-0000-000000000002','aaaaaaaa-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','paragony','obi.jpg','11111111-1111-1111-1111-111111111111/aaaaaaaa-0000-0000-0000-000000000001/paragony/o1.jpg','zdjecie');
+insert into public.paragony(mieszkanie,plik,sklep,kwota) values ('aaaaaaaa-0000-0000-0000-000000000001','ffffffff-0000-0000-0000-000000000002','Sklep Budowlany',540.5);
 select pg_temp.spr(string_agg(rodzaj||': '||tresc, ' | ' order by utworzono, rodzaj)
   = 'wiadomosc: Wiadomość od Marek: „Jutro wchodzą tynki?” | ogolny: Chat ogólny – Marek: „Mamy kolejne mieszkanie, szczegóły w środę” | etap: Etap skończony: 6. Podłogi i drzwi',
   'firma A ma swoje zdarzenia: '||string_agg(rodzaj||': '||tresc, ' | ' order by utworzono, rodzaj)) from public.zdarzenia;
@@ -128,7 +130,7 @@ update public.zdarzenia set przeczytane=true where odbiorca='11111111-1111-1111-
 
 set request.jwt.claim.sub to '11111111-1111-1111-1111-111111111111';
 select pg_temp.spr(string_agg(rodzaj||': '||tresc, ' | ' order by utworzono, rodzaj) =
-  'wiadomosc: Wiadomość od Ekipa Testowa: „Tak, od 8:00” | wiadomosc: Wiadomość od Ekipa Testowa: zdjęcie | ogolny: Chat ogólny – Ekipa Testowa: „Biorę, pasuje środa” | ogolny: Chat ogólny – Budowa Próbna: „Ja też chętnie” | etap: Etap skończony: 6. Podłogi i drzwi | praca: Praca odznaczona: Salon, Panele (Ekipa Testowa) | paragon: Nowy paragon: obi.jpg (Ekipa Testowa)',
+  'wiadomosc: Wiadomość od Ekipa Testowa: „Tak, od 8:00” | wiadomosc: Wiadomość od Ekipa Testowa: zdjęcie | ogolny: Chat ogólny – Ekipa Testowa: „Biorę, pasuje środa” | ogolny: Chat ogólny – Budowa Próbna: „Ja też chętnie” | etap: Etap skończony: 6. Podłogi i drzwi | praca: Praca odznaczona: Salon, Panele (Ekipa Testowa) | paragon: Nowy paragon: Sklep Budowlany 540,50 zł (Ekipa Testowa)',
   'właściciel ma zdarzenia od firm: '||string_agg(rodzaj||': '||tresc, ' | ' order by utworzono, rodzaj)) from public.zdarzenia;
 select pg_temp.spr(count(*)=0, 'firma B nie oznaczyła cudzych zdarzeń jako przeczytane') from public.zdarzenia where przeczytane;
 select pg_temp.spr(cel='listaPrac' and cel_id='cccccccc-0000-0000-0000-000000000001', 'zdarzenie pracy otwiera pomieszczenie w liście prac') from public.zdarzenia where rodzaj='praca';
@@ -199,7 +201,11 @@ select '' from public.zapisz_platnosci('aaaaaaaa-0000-0000-0000-000000000001', j
   'etapy', jsonb_build_array((select id from public.terminy where mieszkanie='aaaaaaaa-0000-0000-0000-000000000001' and nr=3)))));
 select pg_temp.spr(count(*)=1, 'płatność 1 ustalona (zapisz_platnosci)') from public.platnosci where mieszkanie='aaaaaaaa-0000-0000-0000-000000000001';
 update public.platnosci set zaplacona=true where mieszkanie='aaaaaaaa-0000-0000-0000-000000000001';
-insert into public.pliki(mieszkanie,folder,nazwa,sciezka,typ) values ('aaaaaaaa-0000-0000-0000-000000000001','paragony','drugi.jpg','11111111-1111-1111-1111-111111111111/aaaaaaaa-0000-0000-0000-000000000001/paragony/d.jpg','zdjecie');
+insert into public.pliki(id,mieszkanie,folder,nazwa,sciezka,typ) values ('ffffffff-0000-0000-0000-000000000003','aaaaaaaa-0000-0000-0000-000000000001','paragony','drugi.jpg','11111111-1111-1111-1111-111111111111/aaaaaaaa-0000-0000-0000-000000000001/paragony/d.jpg','zdjecie'),
+ ('ffffffff-0000-0000-0000-000000000004','aaaaaaaa-0000-0000-0000-000000000001','paragony','trzeci.jpg','11111111-1111-1111-1111-111111111111/aaaaaaaa-0000-0000-0000-000000000001/paragony/t.jpg','zdjecie');
+insert into public.paragony(mieszkanie,plik,sklep,kwota,zaplacil) values ('aaaaaaaa-0000-0000-0000-000000000001','ffffffff-0000-0000-0000-000000000003','Hurtownia',120,'firma');
+-- zapłacony przez Właściciela aplikacji: firma go nie widzi, więc nie dostaje też powiadomienia
+insert into public.paragony(mieszkanie,plik,sklep,kwota,zaplacil) values ('aaaaaaaa-0000-0000-0000-000000000001','ffffffff-0000-0000-0000-000000000004','Sklep Farb',80,'wlasciciel');
 set request.jwt.claim.sub to '33333333-3333-3333-3333-333333333333';
 insert into public.pliki(mieszkanie,wlasciciel,folder,nazwa,sciezka,typ,poprawka,poprawka_etap) values ('aaaaaaaa-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','poprawki','po.jpg','11111111-1111-1111-1111-111111111111/aaaaaaaa-0000-0000-0000-000000000001/poprawki/po.jpg','zdjecie','bbbbbbbb-0000-0000-0000-000000000001','po');
 update public.poprawki set zrobiona=true where id='bbbbbbbb-0000-0000-0000-000000000001';
@@ -212,8 +218,8 @@ select pg_temp.spr(bool_and(cel='poprawki' and cel_id='bbbbbbbb-0000-0000-0000-0
 select pg_temp.spr(bool_and(cel='terminy'), 'zdarzenia etapów otwierają Terminy') from public.zdarzenia where rodzaj='etap';
 set request.jwt.claim.sub to '33333333-3333-3333-3333-333333333333';
 select pg_temp.spr(string_agg(rodzaj||': '||tresc, ' | ' order by utworzono, tresc) =
-  'poprawka: Nowa poprawka: Puszka lampy krzywo (Marek) | opoznienie: Opóźnienie: etap 3. Hydraulika przesunięty z 10.01.2030 na 20.01.2030 | etap: Etap skończony: Odbiór kominiarski | platnosc: Płatność zapłacona: płatność 1 – 8000,00 zł | paragon: Nowy paragon: drugi.jpg (Marek) | poprawka: Poprawka zatwierdzona: Puszka lampy krzywo (Marek)',
-  'firma A: poprawka, opóźnienie etapu, „Etap skończony”, „Płatność zapłacona”, paragon, zatwierdzenie: '||coalesce(string_agg(rodzaj||': '||tresc, ' | ' order by utworzono, tresc),'-')) from public.zdarzenia where not przeczytane;
+  'poprawka: Nowa poprawka: Puszka lampy krzywo (Marek) | opoznienie: Opóźnienie: etap 3. Hydraulika przesunięty z 10.01.2030 na 20.01.2030 | etap: Etap skończony: Odbiór kominiarski | platnosc: Płatność zapłacona: płatność 1 – 8000,00 zł | paragon: Nowy paragon: Hurtownia 120,00 zł (Marek) | poprawka: Poprawka zatwierdzona: Puszka lampy krzywo (Marek)',
+  'firma A: poprawka, opóźnienie etapu, „Etap skończony”, „Płatność zapłacona”, paragon zapłacony przez firmę (bez paragonu Właściciela), zatwierdzenie: '||coalesce(string_agg(rodzaj||': '||tresc, ' | ' order by utworzono, tresc),'-')) from public.zdarzenia where not przeczytane;
 set request.jwt.claim.sub to '44444444-4444-4444-4444-444444444444';
 select pg_temp.spr(count(*)=0, 'firma B nie dostaje zdarzeń mieszkania firmy A') from public.zdarzenia where mieszkanie='aaaaaaaa-0000-0000-0000-000000000001';
 
