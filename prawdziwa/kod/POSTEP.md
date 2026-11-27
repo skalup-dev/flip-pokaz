@@ -14,8 +14,8 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 | Klocek | Stan |
 |---|---|
 | 6 Szef firmy (zaproszenie linkiem, dostęp, Zabierz/Przywróć, widok firmy, podpis nazwą firmy) | zbudowany, testy zastępcze OK, test bazy lokalnie OK (sql/06_szef_firmy.sql) |
-| 7 Paragony i materiały | w budowie (pomocnik A, razem z 8) – dopisek Pati: odczyt Tesseract.js (pol), przycinanie 4 narożnikami, reguły polskich paragonów, tylko „Sprawdzone” do budżetu, miejsce na AI (wyłączone) |
-| 8 Pieniądze mieszkania | w budowie (pomocnik A) |
+| 7 Paragony i materiały | zbudowany (js/k07_paragony.js, js/k07_odczyt.js, lib/tesseract/, sql/07_paragony.sql): odczyt Tesseract.js pol, jakość zdjęcia, „Zapisz mimo to”, AI wyłączone; ekrany 108 OK |
+| 8 Pieniądze mieszkania | zbudowany (js/k08_pieniadze.js, bez nowego SQL) |
 | 9 Terminy | zbudowany (js/k09_terminy.js, sql/09_terminy.sql); testy ekranów 86 OK razem z 10 |
 | 10 Płatności | zbudowany (js/k10_platnosci.js, sql/10_platnosci.sql); „Dostaliście” zmienione na „Zapłacone firmie” (zasada 20) |
 | 11 Poprawki | zbudowany (js/k11_poprawki.js, sql/11_poprawki.sql); ekrany 102 OK razem z 14 |
@@ -31,6 +31,7 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 
 ## Usługi płatne / klucze (nic nie założone)
 (uzupełniane przy klockach 6, 7, 13)
+- Klocek 7: odczyt paragonu działa za 0 zł (Tesseract.js 6.0.1 + pol.traineddata w prawdziwa/lib/tesseract/, ok. 10,7 MB, ładowane dopiero przy pierwszym odczycie). Lepszy odczyt przez AI przygotowany, ale WYŁĄCZONY (ODCZYT_AI = false w js/k07_paragony.js, funkcja Supabase 'odczyt-paragonu' nie istnieje).
 
 ## Dziennik
 - 28.11 – próbny plik zbiorczy (06, 09–15, 13 na końcu) wchodzi 2× bez błędu; testy bazy 6, 9, 10, 11, 14, 15 i starsze zgodne. Klocek 13 dopasowuje triggery do prawdziwych tabel terminy/platnosci/poprawki (pomocnik D). Czekają: klocek 7+8 (pomocnik A).
