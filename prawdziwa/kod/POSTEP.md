@@ -37,6 +37,7 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 - Klocek 7: odczyt paragonu działa za 0 zł (Tesseract.js 6.0.1 + pol.traineddata w prawdziwa/lib/tesseract/, ok. 10,7 MB, ładowane dopiero przy pierwszym odczycie). Lepszy odczyt przez AI przygotowany, ale WYŁĄCZONY (ODCZYT_AI = false w js/k07_paragony.js, funkcja Supabase 'odczyt-paragonu' nie istnieje).
 
 ## Dziennik
+- 28.11 – kod/06_reszta.sql gotowy do wgrania (1384 linie): wchodzi 2× bez błędu, wszystkie testy bazy (1–15) zgodne, 0 ZLE. Czeka na wgranie przez Pati, potem testy na prawdziwej bazie.
 - 28.11 – klocki 7 i 8 dołączone; kod/06_reszta.sql złożony (06, 07, 09–12, 14, 15, 13), wchodzi 2× bez błędu; testy bazy zgodne poza testem powiadomień (dopasowanie testu do tabeli paragony – pomocnik D). Następnie: Pati wkleja 06_reszta.sql, testy na prawdziwej bazie (właściciel, brat, szef firmy testowy), obrazy.
 - 28.11 – próbny plik zbiorczy (06, 09–15, 13 na końcu) wchodzi 2× bez błędu; testy bazy 6, 9, 10, 11, 14, 15 i starsze zgodne. Klocek 13 dopasowuje triggery do prawdziwych tabel terminy/platnosci/poprawki (pomocnik D). Czekają: klocek 7+8 (pomocnik A).
 - 28.11 – klocki 11, 12, 13, 14 dołączone; hak HAKI.listaPrac; Chat ogólny przez HAKI.poLiscie. Drugi dopisek Pati do klocka 7 (wskazówka do zdjęcia, sprawdzanie jakości, „Zapisz mimo to”) przekazany pomocnikowi A. Czeka tylko klocek 7+8.
