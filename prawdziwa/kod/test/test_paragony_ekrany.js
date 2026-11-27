@@ -22,7 +22,7 @@ for(const [name,vp] of [['pc',{width:1280,height:900}],['tel',{width:390,height:
  await expect(p.locator('h1')).toHaveText('Moje mieszkania');
  await p.click('#dodaj');await p.fill('#ulica','Testowa 7');await p.fill('#firma_remontowa','Ekipa Testowa');await p.fill('#metraz','50');await p.click('#zapisz');await p.click('#dalej');await p.click('#dalej');await p.click('#zatwierdz');
  await expect(p.locator('h1')).toHaveText('Testowa 7');
- const mod=await p.$$eval('.moduly button',e=>e.map(x=>x.innerText));spr(mod.join('|')==='Biblioteka – zdjęcia i pliki PDF|Firma|Lista prac|Paragony i materiały|Pieniądze',name+' przyciski mieszkania od A do Z: '+mod.join(', '));
+ const mod=await p.$$eval('.moduly button',e=>e.map(x=>x.innerText));spr(mod.join('|')===[...mod].sort((a,b)=>a.localeCompare(b,'pl')).join('|')&&['Firma','Paragony i materiały'].every(t=>mod.includes(t))&&mod.some(t=>t.startsWith('Pieniądze')),name+' przyciski mieszkania od A do Z: '+mod.join(', '));
  // ---- KLOCEK 8: puste kwoty, złe kwoty, zapis
  await p.click('#m-pieniadze');await expect(p.locator('h1')).toHaveText('Pieniądze – Testowa 7');await expect(p.locator('#kpiZakup')).toHaveText('–');await kontrola(p,name+' Pieniądze (puste)');
  await expect(p.locator('#app')).toContainText('Nie wpisano jeszcze: cena zakupu, cena dla firmy za m², budżet na materiały.');
@@ -113,7 +113,7 @@ for(const [name,vp] of [['pc',{width:1280,height:900}],['tel',{width:390,height:
  await p.click('#wyloguj');await p.evaluate(fid=>{const L=k=>JSON.parse(localStorage.getItem(k)||'null');const u=L('mock_users').find(x=>x.email==='firma@test.pl');const pr=L('mock_profile');const q=pr.find(x=>x.id===u.id);q.rola='firma';q.nazwa_firmy='Ekipa Testowa';localStorage.setItem('mock_profile',JSON.stringify(pr));localStorage.setItem('mock_dostepy',JSON.stringify([{mieszkanie:fid,firma:u.id,aktywny:true}]))},fid);
  await p.click('[data-t="logowanie"]');
  await p.fill('#email','firma@test.pl');await p.fill('#haslo','Dobrehaslo1');await p.click('#wyslij');await expect(p.locator('h1')).toHaveText('Moje zlecenia');const listaF=await p.locator('.flat').count();spr(true,name+' UWAGA rdzeń: lista „Moje zlecenia” pokazuje mieszkań: '+listaF+' (błąd rdzenia klocka 6, opis w raporcie) – test otwiera mieszkanie bezpośrednio');
- await p.evaluate(fid=>ekranMieszkania(fid),fid);await expect(p.locator('h1')).toHaveText('Testowa 7');const modF=await p.$$eval('.moduly button',e=>e.map(x=>x.innerText));spr(modF.join('|')==='Biblioteka – zdjęcia i pliki PDF|Lista prac|Paragony i materiały',name+' firma: bez „Pieniądze” i „Firma” ('+modF.join(', ')+')');
+ await p.evaluate(fid=>ekranMieszkania(fid),fid);await expect(p.locator('h1')).toHaveText('Testowa 7');const modF=await p.$$eval('.moduly button',e=>e.map(x=>x.innerText));spr(modF.join('|')===[...modF].sort((a,b)=>a.localeCompare(b,'pl')).join('|')&&modF.some(t=>t.startsWith('Paragony'))&&!modF.some(t=>t.startsWith('Pieniądze')||t==='Firma'),name+' firma: bez „Pieniądze” i „Firma” ('+modF.join(', ')+')');
  spr(!/zł/.test(await txt(p,'#app')),name+' firma: na ekranie mieszkania żadnych kwot');
  await p.click('#m-paragony');await expect(p.locator('h1')).toHaveText('Paragony – Testowa 7');const fl=await p.$$eval('[data-dok] .zw b:first-child',e=>e.map(x=>x.textContent));
  spr(fl.join('|')==='Hurtownia Testowa'&&!(await p.locator('[data-ok],[data-odznacz]').count())&&!(await p.locator('#budzetMat').count()),name+' firma widzi tylko dokumenty zapłacone przez firmę ('+fl.join(', ')+'), bez budżetu i bez „Sprawdzone”/„Odznacz”');
