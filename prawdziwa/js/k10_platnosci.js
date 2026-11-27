@@ -50,7 +50,7 @@
       app.innerHTML = `${wroc}<h1>Płatności – ${esc(f.ulica)}</h1>
         <p class="intro">Tu widać, ile pieniędzy firma remontowa ${esc(kto())} dostała już za całą robotę i za które etapy prac. Płatność czeka na zapłatę, gdy wszystkie jej etapy są skończone. To tylko podgląd – płatności ustala i oznacza jako zapłacone Właściciel aplikacji.</p>
         ${bladTxt}${msg ? komunikat(msg, info) : ''}${brakUmowy(D, true)}
-        <div class="card dark"><small>Dostaliście</small><div style="font-size:24px;font-weight:700;color:var(--z)" id="dostali">${zl(zaplacono)}</div>
+        <div class="card dark"><small>Zapłacone firmie</small><div style="font-size:24px;font-weight:700;color:var(--z)" id="dostali">${zl(zaplacono)}</div>
           <div>z ${D.umowa != null ? zl(D.umowa) : '–'} za całą robotę</div>${pasekP(proc)}<div style="margin-top:6px">Zostało: <b id="zostaloF">${D.umowa != null ? zl((gr(D.umowa) - gr(zaplacono)) / 100) : '–'}</b></div></div>
         <div class="card"><div class="row"><span>Umowa</span><b id="umowa">${umowaTxt(D)}</b></div></div>
         <div class="card" id="lista">${D.platnosci.length ? D.platnosci.map(p => `<div class="row" data-platnosc="${p.lp}"><span><b>Płatność ${p.lp}</b><br><small>${nazwyEt(p.st) || 'bez etapów'}</small></span>

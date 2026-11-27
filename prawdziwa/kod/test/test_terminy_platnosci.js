@@ -247,7 +247,7 @@ for(const [name,vp] of [['pc',{width:1280,height:900}],['tel',{width:390,height:
  await expect(p.locator('[data-platnosc="1"]')).toContainText('Rozbiórki i przygotowanie + Elektryka');await expect(p.locator('[data-platnosc="1"]')).toContainText('✓ 21 000 zł');
  await expect(p.locator('[data-platnosc="2"]')).toContainText('Łazienka – płytki i biały montaż + Podłogi i drzwi + Odbiór mieszkania');
  const txtF=await p.locator('#app').innerText();
- spr(await p.locator('#app button:not(#wroc)').count()===0&&!/zakup|Budżet|budżet/.test(txtF),name+' firma: „Dostaliście 21 000 zł z 50 000 zł”, co wchodzi w płatności, bez przycisków, bez ceny zakupu i budżetu');
+ spr(await p.locator('#app button:not(#wroc)').count()===0&&!/zakup|Budżet|budżet/.test(txtF),name+' firma: „Zapłacone firmie: 21 000 zł z 50 000 zł”, co wchodzi w płatności, bez przycisków, bez ceny zakupu i budżetu');
  await kontrola(p,name+' firma Płatności');
  if(process.env.ZRZUTY)await p.screenshot({path:path.join(process.env.ZRZUTY,`firma_platnosci_${name}.png`),fullPage:true});
  spr(!errs.length,name+' brak błędów na stronie '+errs.join(';'));await ctx.close()}
