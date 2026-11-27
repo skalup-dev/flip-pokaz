@@ -29,7 +29,7 @@ zamien("const rpc = async (nazwa, a) => {","const rpc = async (nazwa, a) => { if
 // ---- hak Listy prac w rdzeniu (do dodania w index.html) ----
 const RDZEN_A="const L = await wczytajPrace(fid);\n  const d = L.prace.filter(x => x.zrobiona).length, a = L.prace.length;";
 const RDZEN_B="${msg ? komunikat(msg, true) : ''}\n    ${a ? `<div class=\"card dark\">";
-function zHakiem(h){if(!h.includes(RDZEN_A)||!h.includes(RDZEN_B))throw new Error('rdzeń: brak miejsca na hak');return h.replace(RDZEN_A,RDZEN_A+"\n  const gora = (await Promise.all((HAKI.listaPrac || []).map(h => h(fid).catch(() => '')))).join('');").replace(RDZEN_B,"${msg ? komunikat(msg, true) : ''}${gora}\n    ${a ? `<div class=\"card dark\">")}
+function zHakiem(h){if(h.includes('(HAKI.listaPrac ||'))return h;if(!h.includes(RDZEN_A)||!h.includes(RDZEN_B))throw new Error('rdzeń: brak miejsca na hak');return h.replace(RDZEN_A,RDZEN_A+"\n  const gora = (await Promise.all((HAKI.listaPrac || []).map(h => h(fid).catch(() => '')))).join('');").replace(RDZEN_B,"${msg ? komunikat(msg, true) : ''}${gora}\n    ${a ? `<div class=\"card dark\">")}
 const srv=http.createServer((q,r)=>{const f=path.join(root,q.url.split('?')[0].split('#')[0]);fs.readFile(f,(e,d)=>{if(e){r.writeHead(404);r.end();return}r.writeHead(200,{'content-type':f.endsWith('.js')?'application/javascript':'text/html; charset=utf-8'});r.end(f.endsWith('index.html')?zHakiem(d.toString()):d)})}).listen(+(process.env.PORT||0));
 let URL;let zle=0,ok=0;const spr=(w,t)=>{console.log((w?'OK   ':'ZLE  ')+t);w?ok++:zle++};
 const TY=/\b(Kliknij|Możesz|możesz|Wpisz|Sprawdź|Odczekaj|wrócisz|Wybierz zdj|Zaznacz|Twoj\w*|Twoje|zrobiłeś|dodałeś|Ty|Ciebie|Tobie|wpisałeś|zgłosiłeś)\b/;
