@@ -345,7 +345,8 @@ function ekranListy(msg){
       <div class="card dark kpi"><small>Budżet razem</small><div id="kpiB">${zl(budzet)}</div></div>
       <div class="card dark kpi"><small>Po terminie</small><div id="kpiL">${late}</div></div>
     </div>
-    <button class="btn full" id="dodaj" style="margin-bottom:14px">+ Dodaj mieszkanie</button>
+    <button class="btn full" id="dodaj" style="margin-bottom:14px">+ Dodaj mieszkanie</button>`;
+  app.innerHTML += `
     <div id="lista">${fl.length ? fl.map(f => `
       <button class="card flat" data-id="${f.id}">
         <b>${esc(f.ulica)}</b>${f.miasto ? `, ${esc(f.miasto)}` : ''}
