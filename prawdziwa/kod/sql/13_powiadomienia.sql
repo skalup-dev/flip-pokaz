@@ -130,9 +130,9 @@ language plpgsql security definer set search_path = public as $$
 declare k text := public.nazwa_konta(auth.uid());
 begin
   begin
-    if new.folder like 'faktury%' and to_regclass('public.dokumenty') is null then
+    if new.folder like 'faktury%' then   -- faktury nie mają tabeli dokumentów: zdarzenie zawsze z pliku
       perform public.powiadom_mieszkanie(new.mieszkanie, 'faktura', 'Nowa faktura: ' || new.nazwa || ' (' || k || ')', 'biblioteka', new.folder, false);
-    elsif new.folder = 'paragony' and to_regclass('public.dokumenty') is null then
+    elsif new.folder = 'paragony' and to_regclass('public.paragony') is null then
       perform public.powiadom_mieszkanie(new.mieszkanie, 'paragon', 'Nowy paragon: ' || new.nazwa || ' (' || k || ')', 'biblioteka', new.folder);
     elsif new.folder = 'poprawki' and to_regclass('public.poprawki') is null then
       perform public.powiadom_mieszkanie(new.mieszkanie, 'poprawka', 'Nowe zdjęcie poprawki: ' || new.nazwa || ' (' || k || ')', 'biblioteka', new.folder);
@@ -237,7 +237,7 @@ end $$;
 --    Funkcje powstają zawsze, triggery tylko wtedy, gdy tabela już jest (na dole pliku).
 
 -- 5a. Klocek 7: paragon albo faktura (faktury widzi tylko Właściciel aplikacji).
---     Tabela klocka 7 jeszcze się buduje: nazwa „dokumenty” i kolumny czytane po nazwie są do podmiany po jego oddaniu.
+--     Klocek 7: tabela paragony (kolumny sklep, kwota).
 create or replace function public.pole(j jsonb, klucze text[]) returns text
 language sql immutable as $$ select (select nullif(trim(j->>k), '') from unnest(klucze) with ordinality u(k, i) where nullif(trim(j->>k), '') is not null order by i limit 1) $$;
 revoke all on function public.pole(jsonb, text[]) from public, anon, authenticated;
@@ -247,9 +247,9 @@ declare j jsonb := to_jsonb(new); m uuid; f boolean; opis text; kw text;
 begin
   begin
     m := (j->>'mieszkanie')::uuid;
-    f := lower(coalesce(public.pole(j, array['rodzaj','typ','folder','kategoria']), '')) like '%faktur%';
-    opis := coalesce(public.pole(j, array['sklep','sprzedawca','dostawca','nazwa','opis']), 'bez opisu');
-    kw := public.pole(j, array['kwota','suma','brutto']);
+    f := false;   -- tabela paragony (klocek 7): paragony i faktury materiałów, widoczne też dla firmy
+    opis := coalesce(nullif(trim(j->>'sklep'), ''), 'sklep do sprawdzenia');
+    kw := j->>'kwota';
     perform public.powiadom_mieszkanie(m, case when f then 'faktura' else 'paragon' end,
       case when f then 'Nowa faktura: ' else 'Nowy paragon: ' end || opis || coalesce(' ' || replace(kw, '.', ',') || ' zł', '')
         || ' (' || public.nazwa_konta(auth.uid()) || ')',
@@ -322,7 +322,7 @@ do $$
 declare t record;
 begin
   for t in select * from (values
-      ('dokumenty', 'dokumenty_zdarzenie', 'after insert', 'zdarzenie_dokumentu'),
+      ('paragony', 'paragony_zdarzenie', 'after insert', 'zdarzenie_dokumentu'),
       ('poprawki', 'poprawki_zdarzenie', 'after insert or update of zrobiona, zatwierdzona', 'zdarzenie_poprawki'),
       ('terminy', 'terminy_zdarzenie', 'after update of zrobiony, data_do', 'zdarzenie_terminu_etapu'),
       ('platnosci', 'platnosci_zdarzenie', 'after update of zaplacona', 'zdarzenie_platnosci')) v(tab, trg, kiedy, fn) loop
