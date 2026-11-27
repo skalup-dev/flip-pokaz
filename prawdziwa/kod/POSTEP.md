@@ -33,6 +33,7 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 (uzupełniane przy klockach 6, 7, 13)
 
 ## Dziennik
+- 28.11 – próbny plik zbiorczy (06, 09–15, 13 na końcu) wchodzi 2× bez błędu; testy bazy 6, 9, 10, 11, 14, 15 i starsze zgodne. Klocek 13 dopasowuje triggery do prawdziwych tabel terminy/platnosci/poprawki (pomocnik D). Czekają: klocek 7+8 (pomocnik A).
 - 28.11 – klocki 11, 12, 13, 14 dołączone; hak HAKI.listaPrac; Chat ogólny przez HAKI.poLiscie. Drugi dopisek Pati do klocka 7 (wskazówka do zdjęcia, sprawdzanie jakości, „Zapisz mimo to”) przekazany pomocnikowi A. Czeka tylko klocek 7+8.
 - 28.11 – klocki 9 i 10 dołączone; naprawiony błąd klocka 6: firma nie widziała listy mieszkań.
 - 28.11 – klocek 15 dołączony; rdzeń: HAKI.listaFirmy, HAKI.kartaMieszkania, HAKI.poLiscie, moduł.widoczny(f).
