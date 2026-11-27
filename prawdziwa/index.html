@@ -177,7 +177,8 @@ const wlascicielId = fid => { const f = S.flats && S.flats.find(x => x.id === fi
    rejestrujModul({ k:'klucz', n:'Nazwa przycisku', ekran:fid => ..., firma:true|false, wlasciciel:true|false,
                     etykieta:fid => 'tekst przycisku' (opcjonalnie), dalej:'nazwa w „Co będzie dalej”' (opcjonalnie) })
    HAKI.poWczytaniu: funkcje async wywoływane po wczytaniu mieszkań (np. dzwonek). HAKI.pasek: funkcje po odświeżeniu paska. */
-const MODULY = [], HAKI = { poWczytaniu:[], pasek:[], listaFirmy:[], kartaMieszkania:[], poLiscie:[] };
+const MODULY = [], HAKI = { poWczytaniu:[], pasek:[], listaFirmy:[], kartaMieszkania:[], poLiscie:[], listaPrac:[] };
+/* HAKI.listaPrac: async fid => HTML na górze Listy prac (np. poprawki ilości od architekta) */
 /* HAKI.listaFirmy: () => HTML nad listą „Moje zlecenia” (konto firmy); HAKI.kartaMieszkania: f => HTML dopisany do karty mieszkania;
    HAKI.poLiscie: () => po narysowaniu listy (podpięcie kliknięć); moduł może mieć widoczny: f => true|false */
 const zHakow = (lista, ...a) => lista.map(h => { try { return h(...a) || ''; } catch(e){ return ''; } }).join('');
@@ -630,10 +631,11 @@ async function ekranListaPrac(fid, msg){
   app.innerHTML = '<p>Wczytuję listę prac…</p>';
   const L = await wczytajPrace(fid);
   const d = L.prace.filter(x => x.zrobiona).length, a = L.prace.length;
+  const gora = (await Promise.all((HAKI.listaPrac || []).map(h => Promise.resolve().then(() => h(fid)).catch(() => '')))).join('');
   app.innerHTML = `<button class="btnT" id="wroc">← ${esc(f.ulica)}</button>
     <h1>Lista prac – ${esc(f.ulica)}</h1>
     <p class="intro">Tu są wszystkie prace mieszkania, po pomieszczeniach od A do Z. „5 z 19” znaczy: 5 prac zrobionych z 19. Po kliknięciu pomieszczenia otworzą się jego prace.</p>
-    ${L.blad ? komunikat(/prace|pomieszczenia|zrobiona|praca/i.test(L.blad.message || '') && /find|exist|column/i.test(L.blad.message || '') ? 'Lista prac nie jest jeszcze włączona w bazie danych. Trzeba wgrać plik 05_lista_prac.sql w Supabase.' : blad(L.blad)) : ''}${msg ? komunikat(msg, true) : ''}
+    ${L.blad ? komunikat(/prace|pomieszczenia|zrobiona|praca/i.test(L.blad.message || '') && /find|exist|column/i.test(L.blad.message || '') ? 'Lista prac nie jest jeszcze włączona w bazie danych. Trzeba wgrać plik 05_lista_prac.sql w Supabase.' : blad(L.blad)) : ''}${msg ? komunikat(msg, true) : ''}${gora}
     ${a ? `<div class="card dark"><div class="zw"><b>Razem</b><b id="razemP">${d} z ${a} ${pl(a, 'pracy', 'prac', 'prac')} · ${procent(d, a)}%</b></div>${pasekP(procent(d, a))}</div>
       ${L.pom.map(r => { const w = L.prace.filter(x => x.pomieszczenie === r.id), z = w.filter(x => x.zrobiona).length;
         return `<button class="card room" data-pom="${r.id}"><div class="zw"><b>${esc(r.nazwa)}</b><span>${z} z ${w.length} ›</span></div>${pasekP(procent(z, w.length))}</button>`; }).join('')}`
@@ -1015,6 +1017,8 @@ function ekranUsunZablokowane(f, n){
 <script src="js/k06_firma.js"></script>
 <script src="js/k09_terminy.js"></script>
 <script src="js/k10_platnosci.js"></script>
+<script src="js/k11_poprawki.js"></script>
+<script src="js/k14_ilosci.js"></script>
 <script src="js/k15_szukaj.js"></script>
 <!-- KLOCKI_KONIEC -->
 <script>start();</script>
