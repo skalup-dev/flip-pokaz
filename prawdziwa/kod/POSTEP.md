@@ -14,7 +14,7 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 | Klocek | Stan |
 |---|---|
 | 6 Szef firmy (zaproszenie linkiem, dostęp, Zabierz/Przywróć, widok firmy, podpis nazwą firmy) | zbudowany, testy zastępcze OK, test bazy lokalnie OK (sql/06_szef_firmy.sql) |
-| 7 Paragony i materiały | w budowie (pomocnik A, razem z 8) |
+| 7 Paragony i materiały | w budowie (pomocnik A, razem z 8) – dopisek Pati: odczyt Tesseract.js (pol), przycinanie 4 narożnikami, reguły polskich paragonów, tylko „Sprawdzone” do budżetu, miejsce na AI (wyłączone) |
 | 8 Pieniądze mieszkania | w budowie (pomocnik A) |
 | 9 Terminy | w budowie (pomocnik B, razem z 10) |
 | 10 Płatności | w budowie (pomocnik B) |
@@ -33,5 +33,6 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 (uzupełniane przy klockach 6, 7, 13)
 
 ## Dziennik
+- 27.11 – dopisek Pati do klocka 7 (odczyt paragonu za 0 zł: Tesseract.js, reguły, tekst_surowy/zrodlo_odczytu/pewnosc/pola_niepewne) przekazany pomocnikowi A.
 - 27.11 23:40 – klocek 6 gotowy (commit 604d77f), pola pieniędzy mieszkania w 06. Klocki 7–15 zlecone 5 pomocnikom (osobne kopie repo); każdy oddaje js/kNN_*.js + sql/NN_*.sql + testy. Potem: złożenie, 06_reszta.sql, testy na prawdziwej bazie, obrazy.
 - 27.11 23:15 – plan, POSTEP.md.
