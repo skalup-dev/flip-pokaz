@@ -18,10 +18,10 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 | 8 Pieniądze mieszkania | w budowie (pomocnik A) |
 | 9 Terminy | zbudowany (js/k09_terminy.js, sql/09_terminy.sql); testy ekranów 86 OK razem z 10 |
 | 10 Płatności | zbudowany (js/k10_platnosci.js, sql/10_platnosci.sql); „Dostaliście” zmienione na „Zapłacone firmie” (zasada 20) |
-| 11 Poprawki | w budowie (pomocnik C, razem z 14) |
-| 12 Chat z firmą + Chat ogólny | w budowie (pomocnik D, razem z 13) |
-| 13 Powiadomienia (dzwonek) | w budowie (pomocnik D) |
-| 14 Ilości z planu | w budowie (pomocnik C) |
+| 11 Poprawki | zbudowany (js/k11_poprawki.js, sql/11_poprawki.sql); ekrany 102 OK razem z 14 |
+| 12 Chat z firmą + Chat ogólny | zbudowany (js/k12_chat.js, sql/12_chat.sql); ekrany 92 OK razem z 13 |
+| 13 Powiadomienia (dzwonek) | zbudowany (js/k13_powiadomienia.js, sql/13_powiadomienia.sql – w pliku zbiorczym NA KOŃCU) |
+| 14 Ilości z planu | zbudowany (js/k14_ilosci.js, sql/14_ilosci.sql); hak HAKI.listaPrac w rdzeniu |
 | 15 Szukaj ekipy | zbudowany (js/k15_szukaj.js, sql/15_szukaj.sql), testy: baza 29 OK, ekrany 80 OK; w rdzeniu haki listaFirmy/kartaMieszkania/poLiscie i pole widoczny |
 
 ## Założenia przyjęte bez pytania (do potwierdzenia przez Pati)
@@ -33,6 +33,7 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 (uzupełniane przy klockach 6, 7, 13)
 
 ## Dziennik
+- 28.11 – klocki 11, 12, 13, 14 dołączone; hak HAKI.listaPrac; Chat ogólny przez HAKI.poLiscie. Drugi dopisek Pati do klocka 7 (wskazówka do zdjęcia, sprawdzanie jakości, „Zapisz mimo to”) przekazany pomocnikowi A. Czeka tylko klocek 7+8.
 - 28.11 – klocki 9 i 10 dołączone; naprawiony błąd klocka 6: firma nie widziała listy mieszkań.
 - 28.11 – klocek 15 dołączony; rdzeń: HAKI.listaFirmy, HAKI.kartaMieszkania, HAKI.poLiscie, moduł.widoczny(f).
 - 27.11 – dopisek Pati do klocka 7 (odczyt paragonu za 0 zł: Tesseract.js, reguły, tekst_surowy/zrodlo_odczytu/pewnosc/pola_niepewne) przekazany pomocnikowi A.

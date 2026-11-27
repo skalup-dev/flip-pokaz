@@ -241,8 +241,7 @@
     const n = ileNowych('ogolny');
     b.textContent = (jestFirma() ? 'Chat ogólny' : 'Chat ogólny z firmami') + (n ? ` – nowe: ${n}` : '');
   }
-  const staraLista = window.ekranListy;
-  window.ekranListy = function(){ const w = staraLista.apply(this, arguments); try { przyciskOgolny(); } catch(e){} return w; };
+  HAKI.poLiscie.push(przyciskOgolny);   // przycisk „Chat ogólny” na liście mieszkań (hak rdzenia)
 
   window.CHAT = { ekranChat, ekranOgolny, etykietaOgolny };
   rejestrujModul({ k:'chat', n:'Chat', firma:true, wlasciciel:true,

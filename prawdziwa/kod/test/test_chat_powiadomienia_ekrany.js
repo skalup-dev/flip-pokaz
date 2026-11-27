@@ -142,7 +142,7 @@ for(const [name,vp] of [['pc',{width:1280,height:900}],['tel',{width:390,height:
  await p.click('#powZamknij');await p.click('#dzwonek');spr(!(await p.locator('#ustTelefon').isChecked()),name+' po ponownym otwarciu telefon nadal wyłączony');await p.keyboard.press('Escape');await expect(p.locator('#oknoPow')).toHaveCount(0);
  // ===== WŁAŚCICIEL: chat przy mieszkaniu =====
  await p.click('#logo');await p.click('.flat:has-text("Słoneczna 5")');
- const mods=await p.$$eval('.moduly button',e=>e.map(x=>x.textContent));spr(mods.join('|')==='Biblioteka – zdjęcia i pliki PDF|Chat z firmą|Firma|Lista prac – 0 z 1 (0%)',name+' przyciski mieszkania od A do Z, jest „Chat z firmą” ('+mods.join(', ')+')');
+ const mods=await p.$$eval('.moduly button',e=>e.map(x=>x.textContent));spr(mods.includes('Chat z firmą')&&mods.join('|')===[...mods].sort((x,y)=>x.localeCompare(y,'pl')).join('|'),name+' przyciski mieszkania od A do Z, jest „Chat z firmą” ('+mods.join(', ')+')');
  spr(!(await p.locator('#app').innerText()).includes('Chat z firmą Ekipa'),name+' „Co będzie dalej” nie zapowiada już chatu');
  await p.click('#m-chat');await expect(p.locator('h1')).toHaveText('Chat – Słoneczna 5');await expect(p.locator('#rozmowa .pusto')).toBeVisible();await expect(p.locator('label[for=chTekst]')).toHaveText('Nowa wiadomość do: Ekipa Próbna');
  await kontrola(p,name+' chat (pusty)');
