@@ -666,11 +666,17 @@ async function ekranOdznaczenia(fid, pid, prId, msg){
     <div class="acts"><button class="btn2" id="anuluj">Anuluj</button><button class="btn" id="zapiszZrob">Zapisz jako zrobioną</button></div>`;
   const wroc = () => { S.noweZdj = null; ekranPomieszczenia(fid, pid); };
   $('#wroc').onclick = wroc; $('#anuluj').onclick = wroc;
-  const dodaj = async e => { const { ok, bledy } = await przygotujZdjecia([...e.target.files]); S.noweZdj.lista.push(...ok); ekranOdznaczenia(fid, pid, prId, bledy.length ? 'Nie dodano: ' + bledy.join(' ') : null); };
+  const dodaj = async e => {
+    const pliki = [...e.target.files]; if (!pliki.length) return;
+    S.noweZdj.trwa = true; const z = $('#zapiszZrob'); z.disabled = true; z.classList.add('load'); z.textContent = 'Przygotowuję zdjęcie…';
+    const { ok, bledy } = await przygotujZdjecia(pliki); S.noweZdj.lista.push(...ok); S.noweZdj.trwa = false;
+    ekranOdznaczenia(fid, pid, prId, bledy.length ? 'Nie dodano: ' + bledy.join(' ') : null); };
   $('#aparat').onchange = dodaj; $('#galeria').onchange = dodaj;
   app.querySelectorAll('[data-usunz]').forEach(b => b.onclick = () => { const [z] = S.noweZdj.lista.splice(+b.dataset.usunz, 1); URL.revokeObjectURL(z.url); ekranOdznaczenia(fid, pid, prId); });
   $('#zapiszZrob').onclick = async () => {
-    if (!ile) return ekranOdznaczenia(fid, pid, prId, 'Najpierw trzeba dodać co najmniej jedno zdjęcie.');
+    if (!S.noweZdj || S.noweZdj.praca !== prId || S.noweZdj.trwa) return;
+    const nowe = S.noweZdj.lista;
+    if (!(stare.length + nowe.length)) return ekranOdznaczenia(fid, pid, prId, 'Najpierw trzeba dodać co najmniej jedno zdjęcie.');
     const btn = $('#zapiszZrob'); btn.disabled = true; btn.classList.add('load');
     for (let i = 0; i < nowe.length; i++){
       btn.textContent = `Wgrywam zdjęcie ${i + 1} z ${nowe.length}…`;
