@@ -17,3 +17,8 @@ create or replace function public.firma_widzi_plik(sc text) returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.pliki f where f.sciezka = sc and public.jest_firma_mieszkania(f.mieszkanie)
     and f.folder in ('plany','postepy','poprawki','umowa','zdjecia_po','zdjecia_przed','zdjecia_wiz','paragony')) $$;
+
+-- Naprawa (z testów na prawdziwej bazie): Właściciel aplikacji może usunąć swoje wiadomości z Chatu ogólnego
+grant delete on public.wiadomosci_ogolne to authenticated;
+drop policy if exists wiadomosci_ogolne_usuniecie on public.wiadomosci_ogolne;
+create policy wiadomosci_ogolne_usuniecie on public.wiadomosci_ogolne for delete to authenticated using (wlasciciel = auth.uid());

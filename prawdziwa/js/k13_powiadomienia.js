@@ -51,7 +51,9 @@
       sb.from('zdarzenia').select('*').order('utworzono', { ascending:false }).limit(100),
       sb.from('ustawienia_powiadomien').select('*') ]);
     P.bazaGotowa = !z.error;
+    P.czytane = P.czytane || new Set();
     P.lista = (z.data || []).sort((a, b) => String(b.utworzono).localeCompare(String(a.utworzono)));
+    P.lista.forEach(x => { if (P.czytane.has(x.id)) x.przeczytane = true; });
     P.nowe = P.lista.filter(x => !x.przeczytane);
     P.ust = (u.data && u.data[0]) || null;
     licznik();
@@ -96,12 +98,12 @@
       const b = $('#powWszystkie'); b.disabled = true;
       const { error } = await sb.from('zdarzenia').update({ przeczytane:true }).eq('przeczytane', false);
       if (error) return rysuj(blad(error));
-      P.lista.forEach(x => x.przeczytane = true); P.nowe = []; licznik();
+      P.lista.forEach(x => { x.przeczytane = true; (P.czytane = P.czytane || new Set()).add(x.id); }); P.nowe = []; licznik();
       rysuj('Wszystkie powiadomienia są przeczytane.');
     };
     o.querySelectorAll('[data-zd]').forEach(b => b.onclick = async () => {
       const z = P.lista.find(x => String(x.id) === b.dataset.zd); if (!z) return;
-      if (!z.przeczytane){ z.przeczytane = true; P.nowe = P.lista.filter(x => !x.przeczytane); licznik(); sb.from('zdarzenia').update({ przeczytane:true }).eq('id', z.id).then(() => {}, () => {}); }
+      if (!z.przeczytane){ z.przeczytane = true; (P.czytane = P.czytane || new Set()).add(z.id); P.nowe = P.lista.filter(x => !x.przeczytane); licznik(); sb.from('zdarzenia').update({ przeczytane:true }).eq('id', z.id).then(() => {}, () => {}); }
       zamknij();
       const cel = () => otworz(z);
       S.wyjscieZDanych ? S.wyjscieZDanych(cel) : cel();

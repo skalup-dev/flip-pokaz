@@ -841,7 +841,8 @@ const wielkosc = n => n < 1048576 ? Math.max(1, Math.round(n / 1024)) + ' KB' : 
 const ileP = n => n + ' ' + (n === 1 ? 'plik' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 'pliki' : 'plików');
 const bladPliku = e => {
   const m = (e && (e.message || e.error)) || String(e);
-  if (/bucket not found/i.test(m) || /relation .*pliki/i.test(m) || /Could not find the table/i.test(m)) return 'Biblioteka nie jest jeszcze włączona w bazie danych. Trzeba wgrać plik 02_biblioteka.sql w Supabase.';
+  if (/bucket not found/i.test(m) || /relation "?(public\.)?pliki"? does not exist/i.test(m) || /Could not find the table/i.test(m)) return 'Biblioteka nie jest jeszcze włączona w bazie danych. Trzeba wgrać plik 02_biblioteka.sql w Supabase.';
+  if (/pliki_folder_check/i.test(m)) return 'Ten folder nie jest jeszcze włączony w bazie danych. Trzeba wgrać plik 16_umowa.sql w Supabase.';
   if (/mime type|not supported/i.test(m)) return 'Ten rodzaj pliku nie jest dozwolony. Można wgrywać tylko zdjęcia i pliki PDF.';
   if (/maximum allowed size|too large|Payload too large/i.test(m)) return 'Plik jest za duży. Plik PDF może mieć najwyżej 20 MB.';
   return blad(e);

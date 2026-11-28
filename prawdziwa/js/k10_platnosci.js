@@ -150,4 +150,12 @@
   }
 
   rejestrujModul({ k:'platnosci', n:'Płatności', firma:true, ekran:fid => ekranPlatnosci(fid) });
+  // Klocek 8 (Pieniądze): zapłacone płatności dla firmy wchodzą do „wydane z budżetu”
+  window.WYDATKI_MIESZKANIA = window.WYDATKI_MIESZKANIA || [];
+  window.WYDATKI_MIESZKANIA.push(async fid => {
+    const { data, error } = await sb.from('platnosci').select('kwota,zaplacona').eq('mieszkanie', fid);
+    if (error || !data || !data.length) return null;
+    const kw = Math.round(data.filter(p => p.zaplacona).reduce((a, p) => a + Number(p.kwota) * 100, 0)) / 100;
+    return { n:'Płatności dla firmy (zapłacone)', kwota:kw };
+  });
 })();
