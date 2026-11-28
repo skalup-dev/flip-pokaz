@@ -24,6 +24,9 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 | 14 Ilości z planu | zbudowany (js/k14_ilosci.js, sql/14_ilosci.sql); hak HAKI.listaPrac w rdzeniu |
 | 15 Szukaj ekipy | zbudowany (js/k15_szukaj.js, sql/15_szukaj.sql), testy: baza 29 OK, ekrany 80 OK; w rdzeniu haki listaFirmy/kartaMieszkania/poLiscie i pole widoczny |
 
+## Założenia – odpowiedzi Pati (28.11)
+- TAK: zaproszenie linkiem; konto Właściciela nigdy kontem firmy; firma widzi w Bibliotece plany, postępy, poprawki, zdjęcia, paragony, bez faktur; etap dodany odznaczany ręcznie; umowa z firmą jako PDF – dobudowana (folder „Umowa z firmą”, karta w „Firma”, firma tylko odczyt, sql/16_umowa.sql).
+
 ## Założenia przyjęte bez pytania (do potwierdzenia przez Pati)
 1. Zaproszenie szefa firmy: link do skopiowania (bez SMS). Szef firmy zakłada zwykłe konto i otwiera link – konto staje się kontem firmy.
 2. Konto, które ma własne mieszkania, nie może zostać kontem firmy (żeby Właściciel aplikacji nie zmienił się przez pomyłkę w firmę).
@@ -37,6 +40,7 @@ Zadanie od Pati (27.11.2026, 23:09): zbudować całą resztę według flip-wersj
 - Klocek 7: odczyt paragonu działa za 0 zł (Tesseract.js 6.0.1 + pol.traineddata w prawdziwa/lib/tesseract/, ok. 10,7 MB, ładowane dopiero przy pierwszym odczycie). Lepszy odczyt przez AI przygotowany, ale WYŁĄCZONY (ODCZYT_AI = false w js/k07_paragony.js, funkcja Supabase 'odczyt-paragonu' nie istnieje).
 
 ## Dziennik
+- 28.11 08:42 – Pati wgrała 06_reszta.sql. Sprawdzenie prawdziwej bazy: 21 tabel ze wszystkimi kolumnami i 31 funkcji są. Dobudowana umowa z firmą (16_umowa.sql – do wgrania).
 - 28.11 – kod/06_reszta.sql gotowy do wgrania (1384 linie): wchodzi 2× bez błędu, wszystkie testy bazy (1–15) zgodne, 0 ZLE. Czeka na wgranie przez Pati, potem testy na prawdziwej bazie.
 - 28.11 – klocki 7 i 8 dołączone; kod/06_reszta.sql złożony (06, 07, 09–12, 14, 15, 13), wchodzi 2× bez błędu; testy bazy zgodne poza testem powiadomień (dopasowanie testu do tabeli paragony – pomocnik D). Następnie: Pati wkleja 06_reszta.sql, testy na prawdziwej bazie (właściciel, brat, szef firmy testowy), obrazy.
 - 28.11 – próbny plik zbiorczy (06, 09–15, 13 na końcu) wchodzi 2× bez błędu; testy bazy 6, 9, 10, 11, 14, 15 i starsze zgodne. Klocek 13 dopasowuje triggery do prawdziwych tabel terminy/platnosci/poprawki (pomocnik D). Czekają: klocek 7+8 (pomocnik A).

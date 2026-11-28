@@ -8,6 +8,8 @@
     const { data, error } = await sb.from('dostepy').select('*').eq('mieszkanie', fid).order('utworzono', { ascending:true });
     const d = data || [];
     const nazwy = await nazwyKto(d.map(x => x.firma).filter(Boolean));
+    const ru = await sb.from('pliki').select('id,nazwa,sciezka,typ,utworzono').eq('mieszkanie', fid).eq('folder', 'umowa').order('utworzono', { ascending:false });
+    const um = ru.data || [];
     const firma = (f.firma_remontowa && f.firma_remontowa.trim()) || 'firma remontowa';
     app.innerHTML = `<button class="btnT" id="wroc">← ${esc(f.ulica)}</button>
       <h1>Firma – ${esc(f.ulica)}</h1>
@@ -23,9 +25,15 @@
         : `<div class="zw"><b>Dostęp zabrany: ${esc(nazwy[x.firma] || 'Firma remontowa')}</b></div><p class="info2">Szef firmy nie widzi teraz tego mieszkania. Po kliknięciu „Przywróć dostęp” znowu je zobaczy.</p>
             <div class="acts"><button class="btn" data-przywroc="${x.id}">Przywróć dostęp</button></div>`}</div>`).join('')}
       ${d.some(x => !x.firma) ? '' : `<button class="btn full" id="nowyLink" style="margin-bottom:12px">Utwórz link zaproszenia</button>`}
+      <div class="card" id="umowa"><b>Umowa z firmą</b><p class="info2">Umowa z firmą remontową jako PDF albo zdjęcia. Trafia do Biblioteki › Umowa z firmą. Szef firmy może ją tylko oglądać.</p>
+        ${um.length ? '<ul class="pliki-lista">' + um.map(p => `<li class="zw"><span>✓ ${esc(p.nazwa)} <small>· ${dataPL(p.utworzono)}</small></span><span><button class="btn2" data-pokaz="${p.id}" style="padding:4px 10px;font-size:13px">Zobacz</button></span></li>`).join('') + '</ul>' : '<p class="info2">Nie ma jeszcze umowy.</p>'}
+        <label class="btn full wgraj" for="umowaWybor" id="wgrajUmowe" style="margin-top:8px">+ Wgraj umowę (PDF lub zdjęcie)</label>
+        <input type="file" id="umowaWybor" class="hide" multiple accept="image/*,application/pdf,.pdf"></div>
       <div class="grid g2"><div class="card"><b>Co widzi szef firmy</b><div class="info2">Biblioteka bez faktur (plany, postępy prac, poprawki, zdjęcia, paragony)<br>Chat z Właścicielem aplikacji<br>Dane mieszkania bez zakupu, budżetu i opisu<br>Lista prac – odznacza prace ze zdjęciem, podpis to nazwa firmy<br>Płatności, Poprawki, Terminy</div></div>
         <div class="card"><b>Czego nie widzi</b><div class="info2">Budżetu i ceny zakupu<br>Faktur (firma remontowa, materiały, notariusz, pośrednicy, inne)<br>Innych mieszkań Właściciela aplikacji<br>Notariusza i pośredników</div></div></div>`;
     $('#wroc').onclick = () => ekranMieszkania(fid);
+    $('#umowaWybor').onchange = e => wgraj(fid, 'umowa', [...e.target.files], (txt, ok) => ekranFirma(fid, txt, ok), '#wgrajUmowe');
+    app.querySelectorAll('[data-pokaz]').forEach(b => b.onclick = async () => { const p = um.find(x => x.id === b.dataset.pokaz); const { data } = await sb.storage.from(SCHOWEK).createSignedUrls([p.sciezka], 3600); const l = {}; (data || []).forEach(x => { if (x.signedUrl) l[x.path] = x.signedUrl; }); podglad(p, l); });
     const nl = $('#nowyLink'); if (nl) nl.onclick = async () => {
       nl.disabled = true; const r = await sb.from('dostepy').insert({ mieszkanie:fid }).select().single();
       ekranFirma(fid, r.error ? blad(r.error) : `Link zaproszenia jest gotowy. Po kliknięciu „Kopiuj link” można go wkleić w SMS-a albo maila do szefa firmy ${firma}.`, !r.error);
