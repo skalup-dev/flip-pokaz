@@ -33,6 +33,7 @@ h1{font-size:22px;margin:0 0 6px}h2{font-size:18px;margin:16px 0 8px}
 .flat b{font-size:17px}
 .flat .meta{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px;margin-top:4px}
 .late{font-weight:700}
+.dospr{color:#FF0000;font-weight:700}
 .late::before{content:"! ";display:inline-block;background:var(--c);color:var(--k);border-radius:50%;width:17px;height:17px;text-align:center;line-height:17px;font-size:12px;margin-right:4px}
 .row{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--z)}
 .row:last-child{border-bottom:none}
@@ -1028,6 +1029,26 @@ function ekranUsunZablokowane(f, n){
 <script src="js/k14_ilosci.js"></script>
 <script src="js/k15_szukaj.js"></script>
 <!-- KLOCKI_KONIEC -->
+<script>
+// Zasada Pati: każdy napis lub status „Do sprawdzenia” ZAWSZE na czerwono #FF0000 (na każdym ekranie, w przyciskach, licznikach, komunikatach i w dzwonku)
+(function(){
+  const WZ = /do sprawdzenia/i, POMIN = /^(SCRIPT|STYLE|TEXTAREA|OPTION|TITLE|INPUT)$/;
+  function oznacz(korzen){
+    const w = document.createTreeWalker(korzen, NodeFilter.SHOW_TEXT, { acceptNode: t => {
+      const r = t.parentNode; if (!r || POMIN.test(r.nodeName) || r.closest('.dospr,[contenteditable]')) return NodeFilter.FILTER_REJECT;
+      return WZ.test(t.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP; } });
+    const lista = []; while (w.nextNode()) lista.push(w.currentNode);
+    lista.forEach(t => {
+      const f = document.createDocumentFragment(); let reszta = t.nodeValue, m;
+      while ((m = reszta.match(WZ))){ if (m.index) f.appendChild(document.createTextNode(reszta.slice(0, m.index)));
+        const s = document.createElement('span'); s.className = 'dospr'; s.textContent = m[0]; f.appendChild(s); reszta = reszta.slice(m.index + m[0].length); }
+      if (reszta) f.appendChild(document.createTextNode(reszta)); t.parentNode.replaceChild(f, t); });
+  }
+  new MutationObserver(zm => zm.forEach(z => z.addedNodes.forEach(n => { if (n.nodeType === 1) oznacz(n); else if (n.nodeType === 3 && n.parentNode) oznacz(n.parentNode); })))
+    .observe(document.body, { childList:true, subtree:true });
+  oznacz(document.body);
+})();
+</script>
 <script>start();</script>
 </body>
 </html>

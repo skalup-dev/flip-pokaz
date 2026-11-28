@@ -70,7 +70,7 @@
     const karta = r => `<div class="card" data-dok="${r.id}"><div class="zw"><b>${esc(r.sklep)}</b><b>${kwotaPL(r.kwota)}</b></div>
       ${r.co ? `<div>${esc(r.co)}</div>` : ''}<small>${dt(r.data)} · zapłacił: ${esc(zaplacil(r, f))}</small>
       ${r.sprawdzone ? `<div class="info2"><b>✓ Sprawdzone, zgadza się</b></div>`
-        : `<div class="late info2">Do sprawdzenia${r.pola_niepewne && r.pola_niepewne.length ? ': ' + esc(listaPol(r.pola_niepewne)) : ''}${F() ? ' – czeka na Właściciela aplikacji' : ''}</div>`}
+        : `<div class="ostrz info2">Do sprawdzenia${r.pola_niepewne && r.pola_niepewne.length ? ': ' + esc(listaPol(r.pola_niepewne)) : ''}${F() ? ' – czeka na Właściciela aplikacji' : ''}</div>`}
       <div class="acts">${F() ? '' : r.sprawdzone ? `<button class="btn2" data-odznacz="${r.id}">Odznacz</button>` : `<button class="btn" data-ok="${r.id}">Sprawdzone, zgadza się</button>`}
         <button class="btn2" data-zobacz="${r.id}">Zobacz zdjęcie i dane</button></div></div>`;
     const bud = f.budzet_materialow == null ? null : Number(f.budzet_materialow);
@@ -436,7 +436,7 @@
         <div class="row"><span>Kto zapłacił</span><span>${esc(zaplacil(r, f))}</span></div>
         <div class="row"><span>Dodał</span><span>${esc(nazwy[r.dodal] || 'Właściciel aplikacji')} · ${dataPL(r.utworzono)}</span></div>
         <div class="row"><span>Odczyt</span><span>${r.zrodlo_odczytu === 'reczny' ? 'dane przepisane ręcznie' : (r.zrodlo_odczytu === 'ai' ? 'odczyt AI' : 'odczyt ze zdjęcia w telefonie') + (r.pewnosc != null ? ` · pewność ${r.pewnosc}%` : '')}</span></div>
-        <div class="row"><span>Stan</span>${r.sprawdzone ? `<b>✓ Sprawdzone przez ${esc(nazwy[r.sprawdzil] || 'Właściciel aplikacji')} · ${dataPL(r.sprawdzono)}</b>` : `<b class="late">Do sprawdzenia${r.pola_niepewne && r.pola_niepewne.length ? ': ' + esc(listaPol(r.pola_niepewne)) : ''}</b>`}</div>
+        <div class="row"><span>Stan</span>${r.sprawdzone ? `<b>✓ Sprawdzone przez ${esc(nazwy[r.sprawdzil] || 'Właściciel aplikacji')} · ${dataPL(r.sprawdzono)}</b>` : `<b class="ostrz">Do sprawdzenia${r.pola_niepewne && r.pola_niepewne.length ? ': ' + esc(listaPol(r.pola_niepewne)) : ''}</b>`}</div>
       </div>
       ${poz.length ? `<div class="card"><b>Pozycje (${poz.length})</b>${poz.map(x => `<div class="poz"><span>${x.zgodna === false ? '<span class="ostrz">! </span>' : ''}${esc(x.nazwa)}</span><span>${String(x.ilosc).replace('.', ',')} × ${zl(x.cena)} = ${zl(x.wartosc)}${x.ptu ? ' ' + esc(x.ptu) : ''}</span></div>`).join('')}</div>` : ''}
       ${r.tekst_surowy ? `<div class="card"><details><summary>Tekst odczytany ze zdjęcia</summary><div class="surowy">${esc(r.tekst_surowy)}</div></details></div>` : ''}

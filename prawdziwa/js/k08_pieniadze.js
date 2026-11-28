@@ -61,7 +61,7 @@
         <div class="row"><span>Budżet remontu razem</span><b>${zl(bud)}${staryBudzet ? ' <small>(z danych mieszkania)</small>' : ''}</b></div>
         <div class="row"><span>Wydane na materiały (paragony sprawdzone)</span><b>${zl(P.mat)}</b></div>
         ${P.inne.map(x => `<div class="row"><span>${esc(x.n)}</span><b>${zl(x.kwota)}</b></div>`).join('')}
-        ${P.doSpr ? `<div class="row"><span>Paragony do sprawdzenia (${P.doSpr}) – jeszcze nie liczone</span><b class="late">czeka: ${zl(P.czeka)}</b></div>` : ''}
+        ${P.doSpr ? `<div class="row"><span>Paragony do sprawdzenia (${P.doSpr}) – jeszcze nie liczone</span><b class="ostrz">czeka: ${zl(P.czeka)}</b></div>` : ''}
         ${window.WYDATKI_MIESZKANIA.length ? '' : '<div class="row"><span>Płatności dla firmy</span><span>dojdą razem z zakładką Płatności</span></div>'}
         <div class="row"><span><b>Mieszkanie kosztuje razem</b> (zakup + wydane)</span><b>${zl(razem)}</b></div></div>
       ${num(f.metraz) == null ? '<p class="info2 ostrz">Metraż nie jest wpisany, więc umowy z firmą nie da się policzyć. Metraż wpisuje się w „Zmień dane” mieszkania.</p>' : ''}
