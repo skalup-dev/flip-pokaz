@@ -115,7 +115,7 @@
         <label for="etK-${i}">Kwota (zł)</label><input id="etK-${i}" inputmode="decimal" value="${esc(r.k)}" placeholder="np. 15000">
         <label>Etapy prac w tej płatności</label>
         ${lista.map(e => { const inna = robocze.findIndex((q, k) => k !== i && q.st.includes(e.id)), on = r.st.includes(e.id);
-          return `<div class="pr" style="${inna >= 0 ? 'opacity:.45' : ''}"><button class="box${on ? ' on' : ''}" data-tog="${i}:${e.id}" ${inna >= 0 ? 'disabled' : ''} aria-label="${on ? 'Odznacz' : 'Zaznacz'} etap ${esc(e.nazwa)} w płatności ${i + 1}">${on ? '✓' : ''}</button>
+          return `<div class="pr"><button class="box${on ? ' on' : ''}" style="${inna >= 0 ? 'border-style:dashed' : ''}" data-tog="${i}:${e.id}" ${inna >= 0 ? 'disabled' : ''} aria-label="${on ? 'Odznacz' : 'Zaznacz'} etap ${esc(e.nazwa)} w płatności ${i + 1}">${on ? '✓' : ''}</button>
             <div class="tx">${esc(e.nazwa)}${inna >= 0 ? ` <small>(w płatności ${inna + 1})</small>` : ''}</div></div>`; }).join('')}</div>`).join('')}</div>
       <button class="btn2 full" id="dodajP">+ Dodaj płatność</button>
       <div class="card dark" style="margin-top:10px" id="etS">${podsumowanie(D)}</div>

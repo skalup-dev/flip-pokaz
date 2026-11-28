@@ -90,7 +90,7 @@ for(const [name,vp] of [['pc',{width:1280,height:900}],['tel',{width:390,height:
  // Odznacz i ponowne sprawdzenie
  const leroy=p.locator('[data-dok]',{hasText:'Leroy Merlin'});await leroy.locator('[data-odznacz]').click();await expect(p.locator('.msg')).toContainText('Odznaczono: Leroy Merlin 228,18 zł jest znowu „Do sprawdzenia” i nie liczy się do wydanych.');
  await expect(p.locator('#kpiDoSpr')).toHaveText('1');await expect(p.locator('#budzetMat')).toContainText('wydane 1080,4 zł');await expect(p.locator('#budzetMat')).toContainText('Czeka na sprawdzenie: 228,18 zł');
- await expect(leroy.locator('.ostrz')).toHaveText('Do sprawdzenia');spr(true,name+' „Odznacz”: Do sprawdzenia, wydane bez tej kwoty, „czeka” osobno');
+ await expect(leroy.locator('.late')).toHaveText('Do sprawdzenia');{const k=await leroy.locator('.late').evaluate(e=>[getComputedStyle(e).color,getComputedStyle(e).fontWeight,getComputedStyle(e,'::before').content]);spr(k[0]==='rgb(30, 26, 23)'&&+k[1]>=700&&/!/.test(k[2]),name+' „Do sprawdzenia”: pogrubiona czerń z „!” ('+k.join(' / ')+')')}spr(true,name+' „Odznacz”: Do sprawdzenia, wydane bez tej kwoty, „czeka” osobno');
  await p.click('#wroc');await expect(p.locator('#m-paragony')).toHaveText('Paragony i materiały – 1 do sprawdzenia');await expect(p.locator('#m-pieniadze')).toHaveText('Pieniądze – razem 231 080,4 zł');spr(true,name+' przyciski mieszkania: „1 do sprawdzenia”, „Pieniądze – razem”');
  await p.click('#m-pieniadze');spr(await txt(p,'.kpi:has(#kpiWydane)')==='Remont: wydane z budżetu 1080,4 zł z 100 000 zł czeka na sprawdzenie: 228,18 zł'&&await txt(p,'#kpiRazem')==='231 080,4 zł',name+' Pieniądze: wydane tylko sprawdzone, „czeka” osobno, razem = zakup + wydane');
  await p.click('#doParagonow');await p.locator('[data-dok]',{hasText:'Leroy Merlin'}).locator('[data-ok]').click();await expect(p.locator('.msg')).toContainText('Sprawdzone: Leroy Merlin 228,18 zł. Kwota weszła do wydanych na materiały.');
@@ -129,7 +129,7 @@ for(const [name,vp] of [['pc',{width:1280,height:900}],['tel',{width:390,height:
  // ---- znowu właściciel: dokument firmy do sprawdzenia
  await p.click('#wyloguj');await expect(p.locator('h1')).toHaveText('Logowanie');await p.fill('#email','pati@test.pl');await p.fill('#haslo','Dobrehaslo1');await p.click('#wyslij');await expect(p.locator('h1')).toHaveText('Moje mieszkania');
  await p.click('.flat:has-text("Testowa 7")');await expect(p.locator('#m-paragony')).toHaveText('Paragony i materiały – 1 do sprawdzenia');await p.click('#m-paragony');
- const fd=p.locator('[data-dok]',{hasText:/SKLEP TESTOWY/});await expect(fd.locator('.ostrz')).toContainText('Do sprawdzenia: Sklep');await expect(fd).toContainText('zapłacił: Ekipa Testowa');
+ const fd=p.locator('[data-dok]',{hasText:/SKLEP TESTOWY/});await expect(fd.locator('.late')).toContainText('Do sprawdzenia: Sklep');await expect(fd).toContainText('zapłacił: Ekipa Testowa');
  await fd.locator('[data-zobacz]').click();await expect(p.locator('.row:has-text("Dodał")')).toContainText('Ekipa Testowa');await p.click('#okDok');await expect(p.locator('.row:has-text("Stan")')).toContainText('✓ Sprawdzone przez Pati');
  spr(true,name+' właściciel: dokument firmy „Do sprawdzenia: Sklep”, dodał Ekipa Testowa, „Sprawdzone, zgadza się”');
  spr(!errs.length,name+' brak błędów na stronie '+errs.join(';'));
