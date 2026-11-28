@@ -41,6 +41,7 @@ Zasady ustaliła Pati (Właścicielka projektu).
 22. Listy są od A do Z, a „Inne” zawsze na końcu. Liczby od najmniejszej do największej.
 23. Aplikacja działa na telefonie, tablecie i komputerze, bez błędów i zawieszeń.
 24. Wszystko, co robisz (maile, PDF, Excele, nowe ekrany), wygląda graficznie tak samo jak cała aplikacja: te same kolory, przyciski, czcionki i układ.
+28. Wszystko z napisem lub statusem „Do sprawdzenia” ZAWSZE na czerwono – zasada ogólna dla wszystkich aplikacji i programów Pati. To drugi wyjątek od trzech kolorów firmowych (obok czerwonego/zielonego statusu poprawek).
 
 ## Podglądy
 
