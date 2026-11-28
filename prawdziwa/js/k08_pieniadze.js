@@ -54,7 +54,7 @@
         <div class="card dark kpi"><small>Mieszkanie kosztuje razem</small><div id="kpiRazem">${zl(razem)}</div></div></div>
       <p class="info2" id="liniaFirma" style="margin-bottom:12px">Firma: ${num(f.cena_firmy_m2) == null ? '– zł/m²' : zl(num(f.cena_firmy_m2)) + '/m²'}${um != null ? ' = ' + zl(um) : ''} · materiały: ${zl(mat)}</p>
       ${bud != null ? `<div class="card">${pasekP(Math.min(100, bud > 0 ? Math.round(P.wyd / bud * 100) : 100))}<div class="zw" style="margin-top:6px"><span>Wydane ${bud > 0 ? Math.round(P.wyd / bud * 100) : 0}% budżetu</span><b class="${P.wyd > bud ? 'ostrz' : ''}">${P.wyd > bud ? 'budżet przekroczony o ' + zl(r2(P.wyd - bud)) : 'zostało ' + zl(r2(bud - P.wyd))}</b></div></div>` : ''}
-      <div class="card" id="skad"><b>Skąd te liczby</b>
+      <style>#skad .row>b{white-space:nowrap;text-align:right}#skad .row>span:first-child{min-width:0}</style><div class="card" id="skad"><b>Skąd te liczby</b>
         <div class="row"><span>Cena zakupu</span><b>${zl(zakup)}</b></div>
         <div class="row"><span>Umowa z firmą${num(f.cena_firmy_m2) != null && num(f.metraz) != null ? ` (${zl(num(f.cena_firmy_m2))} × ${m2(num(f.metraz))})` : ''}</span><b>${zl(um)}</b></div>
         <div class="row"><span>Budżet na materiały</span><b>${zl(mat)}</b></div>
