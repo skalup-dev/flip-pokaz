@@ -22,3 +22,9 @@ language sql stable security definer set search_path = public as $$
 grant delete on public.wiadomosci_ogolne to authenticated;
 drop policy if exists wiadomosci_ogolne_usuniecie on public.wiadomosci_ogolne;
 create policy wiadomosci_ogolne_usuniecie on public.wiadomosci_ogolne for delete to authenticated using (wlasciciel = auth.uid());
+
+-- Sprawdzenie: po uruchomieniu na dole pokaże się jeden wiersz, wszystkie trzy kolumny mają być „true”
+select
+  (select pg_get_constraintdef(oid) like '%umowa%' from pg_constraint where conname = 'pliki_folder_check') as umowa_wlaczona,
+  (select pg_get_expr(polqual, polrelid) like '%umowa%' from pg_policy where polname = 'pliki_firma_odczyt') as firma_widzi_umowe,
+  exists (select 1 from pg_policy where polname = 'wiadomosci_ogolne_usuniecie') as usuwanie_chatu;
